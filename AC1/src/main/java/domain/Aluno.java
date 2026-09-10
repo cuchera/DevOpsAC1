@@ -2,15 +2,15 @@ package domain;
 
 public class Aluno {
 
-    private boolean direitoRecuperacao = false;
+    private String mensagem;
 
     public void encerrarCurso(double mediaFinal) {
         if (mediaFinal == 7.0) {
-            direitoRecuperacao = true;
+            mensagem = "Aluno tem direito a uma recuperação";
         }
     }
 
-    public boolean getDireitoRecuperacao() {
-        return direitoRecuperacao;
+    public String getMensagem() {
+        return mensagem;
     }
 }
