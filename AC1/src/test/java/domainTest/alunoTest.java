@@ -7,12 +7,15 @@ import org.junit.jupiter.api.Test;
 public class alunoTest {
 
     @Test
-    public void deveTerDireitoARecuperacaoQuandoMediaForIgualASete() {
+    public void deveInformarDireitoARecuperacaoQuandoMediaForIgualASete() {
 
         Aluno aluno = new Aluno();
 
         aluno.encerrarCurso(7.0);
 
-        Assertions.assertTrue(aluno.getDireitoRecuperacao());
+        Assertions.assertEquals(
+            "Aluno tem direito a uma recuperação",
+            aluno.getMensagem()
+        );
     }
 }
