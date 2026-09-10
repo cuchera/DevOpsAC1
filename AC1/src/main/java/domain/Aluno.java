@@ -11,7 +11,7 @@ public class Aluno {
 
         public void encerrarCurso(double mediaFinal) {
             if (mediaFinal >= 7.0) {
-                this.cursosExtrasDisponiveis = this.cursosExtrasDisponiveis + 1;
+                this.cursosExtrasDisponiveis = this.cursosExtrasDisponiveis + 3;
             };
         }
 
