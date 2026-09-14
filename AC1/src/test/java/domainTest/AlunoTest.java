@@ -10,12 +10,12 @@ public class AlunoTest {
 
     @Test
     void deveConcederTresCursosExtrasQuandoMediaForMaiorQueSete() {
-        Aluno aluno = new Aluno("Leonardo");
+       Aluno aluno = new Aluno("Leonardo");
 
-        int totalQueDeveDar = aluno.getCursosExtrasDisponiveis() + 3;
-        aluno.encerrarCurso(9.5);
+       int totalQueDeveDar = aluno.getCursosExtrasDisponiveis() + 3;
+       aluno.encerrarCurso(9.5);
 
-        Assertions.assertEquals(totalQueDeveDar, aluno.getCursosExtrasDisponiveis());
+       Assertions.assertEquals(totalQueDeveDar, aluno.getCursosExtrasDisponiveis());
     }
 
 }
