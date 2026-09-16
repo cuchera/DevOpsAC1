@@ -96,7 +96,7 @@
                 <tr class="bg-slate-100 border-b">
                     <th class="p-3 text-sm font-semibold text-slate-600">ID</th>
                     <th class="p-3 text-sm font-semibold text-slate-600">Nome</th>
-                    <th class="p-3 text-sm font-semibold text-slate-600">Última Média</th>
+                    <th class="p-3 text-sm font-semibold text-slate-600">Última Média / Resultado do Curso</th>
                     <th class="p-3 text-sm font-semibold text-slate-600">Status</th>
                     <th class="p-3 text-sm font-semibold text-slate-600">Saldo Cursos Extras</th>
                     <th class="p-3 text-sm font-semibold text-slate-600 text-center">Ações Gamificadas</th>
@@ -106,7 +106,12 @@
                 <tr v-for="aluno in alunos" :key="aluno.id" class="border-b hover:bg-slate-50 transition">
                     <td class="p-3 font-mono text-sm">{{ aluno.id }}</td>
                     <td class="p-3 font-medium text-slate-800">{{ aluno.nome }}</td>
-                    <td class="p-3 font-bold">{{ aluno.mediaFinal }}</td>
+                    <td class="p-3">
+                        <div class="font-bold">{{ aluno.mediaFinal }}</div>
+                        <div class="text-xs text-slate-500 mt-1">
+                            {{ aluno.mensagem }}
+                        </div>
+                    </td>
                     <td class="p-3">
                 <span
                         :class="aluno.cursoConcluido ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
@@ -154,7 +159,7 @@
 
     createApp({
         setup() {
-            const API_URL = 'http://localhost:8080/api/alunos';
+            const API_URL = '/api/alunos';
             const alunos = ref([]);
             const alunoSelecionadoId = ref(null);
             const form = ref({
