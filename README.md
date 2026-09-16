@@ -32,3 +32,18 @@ Essa falha comprova que o teste está validando corretamente a regra de negócio
 Após corrigir a mensagem de recuperação, os dois testes passaram.
 
 ![Evidência GREEN — testes passando](evidencias/Ariane/BDD3-GREEN.png)
+
+#### 🔵 BLUE
+
+Após o GREEN, a mensagem de recuperação foi extraída para uma
+constante, mantendo o comportamento da regra de negócio.
+
+Foram adicionados testes complementares para verificar o nome
+do aluno e o cenário de média inferior a 7,0.
+
+O relatório do JaCoCo confirmou 100% de cobertura de instruções,
+branches, linhas e métodos da classe Aluno.
+
+![BLUE — cobertura da classe Aluno](evidencias/Ariane/BDD3-BLUE-JACOCO-100.png)
+
+![BLUE — testes após a refatoração](evidencias/Ariane/BDD3-BLUE.png)

@@ -30,4 +30,22 @@ public class AlunoTest {
                 aluno.getCursosExtrasDisponiveis()
         );
     }
+
+    @Test
+    void deveRetornarNomeDoAluno() {
+        Aluno aluno = new Aluno("Ariane");
+
+        Assertions.assertEquals("Ariane", aluno.getNome());
+    }
+
+    @Test
+    void naoDeveConcederBeneficiosQuandoMediaForMenorQueSete() {
+        Aluno aluno = new Aluno("Ariane");
+
+        aluno.encerrarCurso(6.0);
+
+        Assertions.assertEquals(0, aluno.getCursosExtrasDisponiveis());
+        Assertions.assertNull(aluno.getMensagem());
+    }
+
 }

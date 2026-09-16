@@ -2,6 +2,9 @@ package domain;
 
 public class Aluno {
 
+    private static final String MENSAGEM_RECUPERACAO =
+            "Aluno tem direito a uma recuperação";
+
     private final String nome;
     private int cursosExtrasDisponiveis = 0;
     private String mensagem;
@@ -14,7 +17,7 @@ public class Aluno {
         if (mediaFinal > 7.0) {
             this.cursosExtrasDisponiveis += 3;
         } else if (mediaFinal == 7.0) {
-            this.mensagem = "Aluno tem direito a uma recuperação";
+            this.mensagem = MENSAGEM_RECUPERACAO;
         }
     }
 
