@@ -14,7 +14,7 @@ public class Aluno {
         if (mediaFinal > 7.0) {
             this.cursosExtrasDisponiveis += 3;
         } else if (mediaFinal == 7.0) {
-            this.mensagem = "Mensagem errada";
+            this.mensagem = "Aluno tem direito a uma recuperação";
         }
     }
 
