@@ -62,5 +62,19 @@ class AlunoTest {
         assertEquals(0, aluno.getQuantidadeCursosExtras());
         assertFalse(aluno.temDireitoACursosExtras());
     }
+    
+    @Test
+    void deveConcederAcessoAoTerceiroCursoExtra() {
+
+        Aluno aluno = new Aluno();
+        aluno.setCursosExtras(3);
+
+        aluno.matricularCursoExtra();
+        aluno.matricularCursoExtra();
+
+        aluno.matricularCursoExtra();
+
+        assertTrue(aluno.temAcessoAoCursoExtra());
+    }
 
 }
