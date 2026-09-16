@@ -1,22 +1,54 @@
 # DevOpsAC1
 
-<<<<<<< HEAD
-RED
-Antes de qualquer implementação (ou implementação temporariamente quebrada, ver commit), o teste falhava conforme esperado, comprovando que ele realmente testa a regra de negócio e não um "green falso".
-![RED - teste falhando](image.png)
+## Participação individual — Gabriel
 
+### User Story escolhida
 
-GREEN
-Com a implementação de `Aluno.encerrarCurso()` feita, todos os testes passam.
-![GREEN - testes passando](image-1.png)
+**Como** administrador de uma plataforma de ensino gamificada,
+**quero** criar uma missão de "subir de nível" para o aluno,
+**para** manter o engajamento através de gamificação.
 
-Após o GREEN, a classe `Aluno` foi revisada (ajustes de formatação/indentação) e testes complementares foram adicionados para fechar os branches não cobertos, Com isso, a suíte de testes atinge 100% de cobertura, sem necessidade de nenhuma refatoração adicional na lógica de negócio — apenas nos testes, para exercitar todos os caminhos possíveis.
+### BDD 1 — Gabriel
 
-![alt text](image-2.png)
-![alt text](image-3.png)
+**Cenário:** aluno com média igual ou superior a 7,0 recebe cursos extras.
 
-**Linha 13 (amarelo — losango 🔶):** o `if (mediaFinal >= 7.0)` tem cobertura parcial de branch. Até este momento só existe o teste do caminho em que a condição é **verdadeira** (média ≥ 7,0). O branch em que ela é **falsa** (média < 7,0) é coberto pelo teste `naoDeveConcederCursosExtrasQuandoMediaForMenorQueSete`, de responsabilidade de outro membro do grupo — parte do trabalho dividido entre a equipe e ainda em desenvolvimento no momento deste print.
-=======
+* **Dado** um aluno que concluiu um curso;
+* **E** sua média final foi igual ou superior a 7,0;
+* **Quando** o sistema processa o encerramento do curso;
+* **Então** ele deve ter direito a escolher mais três cursos.
+
+### Implementação com TDD
+
+A implementação foi desenvolvida seguindo o ciclo RED, GREEN e BLUE.
+
+#### 🔴 RED
+
+Antes de qualquer implementação, o teste foi executado e falhou conforme esperado, comprovando que ele realmente testa a regra de negócio e não um "green falso".
+
+![Evidência RED — teste falhando](image.png)
+
+#### 🟢 GREEN
+
+Com a implementação de `Aluno.encerrarCurso()` feita, o teste principal passou. Nesta etapa a cobertura de código ainda não estava em 100% — o branch referente ao cenário de média inferior a 7,0 seria coberto posteriormente pelo BDD 2 (Leonardo), como parte do trabalho dividido entre a equipe.
+
+![Evidência GREEN — teste passando](image-1.png)
+
+#### 🔵 BLUE
+
+Após o GREEN, a classe `Aluno` foi revisada (ajustes de formatação e nomenclatura) e testes complementares foram adicionados para fechar os branches não cobertos. Com isso, a suíte de testes atingiu 100% de cobertura, sem necessidade de refatoração adicional na lógica de negócio.
+
+![Evidência BLUE — cobertura de 100% no JaCoCo](image-2.png)
+![Evidência BLUE — relatório detalhado](image-3.png)
+
+### Arquivos implementados
+
+* `AC1/src/main/java/domain/Aluno.java`
+* `AC1/src/test/java/domainTest/AlunoTest.java`
+
+### Regra implementada
+
+* Aluno com curso concluído e média igual ou superior a 7,0 recebe três cursos extras.
+* Aluno com média inferior a 7,0 não recebe cursos extras (branch complementado pelo BDD 2 — Leonardo).
 
 ## Participação individual — Leonardo
 
