@@ -17,16 +17,7 @@
 * **Quando** o sistema processa o encerramento do curso;
 * **Então** ele deve ter direito a escolher mais três cursos.
 
-## Participação individual — Ariane
 
-### BDD 3 — Ariane
-
-**Cenário:** aluno com média final igual a 7,0 tem direito à recuperação.
-
-* **Dado** um aluno que concluiu um curso;
-* **E** sua média final foi igual a 7,0;
-* **Quando** o sistema processa o encerramento do curso;
-* **Então** ele deve ter direito a uma recuperação.
 
 ### Implementação com TDD
 
@@ -34,7 +25,6 @@ A implementação foi desenvolvida seguindo o ciclo RED, GREEN e BLUE.
 
 #### 🔴 RED
 
-<<<<<<< HEAD
 Antes de qualquer implementação, o teste foi executado e falhou conforme esperado, comprovando que ele realmente testa a regra de negócio e não um "green falso".
 
 ![Evidência RED — teste falhando](image.png)
