@@ -6,7 +6,7 @@ public record AlunoResponseDTO(
         @Schema(description = "ID gerado", example = "1")
         Long id,
 
-        @Schema(description = "Nome do aluno", example = "Leonardo Cuchera")
+        @Schema(description = "Nome do aluno", example = "Leonardo da silva")
         String nome,
 
         @Schema(description = "Status de conclusão", example = "true")
