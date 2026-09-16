@@ -19,5 +19,7 @@ public record AlunoResponseDTO(
         int quantidadeCursosExtras,
 
         @Schema(description = "Indica direito a cursos extras", example = "true")
-        boolean temDireitoACursosExtras
+        boolean temDireitoACursosExtras,
+
+        String mensagem
 ) {}

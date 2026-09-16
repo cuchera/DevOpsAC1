@@ -202,6 +202,8 @@ or
 
 404 Not Found — Nenhum aluno encontrado com o ID informado.
 
+![img.png](img.png)
+
 ### 2. Atualizar Aluno por ID   
 Exclui permanentemente um registro de aluno do banco de dados.
 
@@ -214,3 +216,5 @@ Respostas (Responses):
 204 No Content — Aluno removido com sucesso (sem corpo de resposta).
 
 404 Not Found — Nenhum aluno encontrado com o ID informado.
+
+![img_1.png](img_1.png)

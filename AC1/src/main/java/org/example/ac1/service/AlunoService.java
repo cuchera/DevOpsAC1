@@ -26,48 +26,51 @@ public class AlunoService {
         entity.setQuantidadeCursosExtras(domainAluno.getQuantidadeCursosExtras());
 
         AlunoEntity saved = alunoRepository.save(entity);
-        return toResponseDTO(saved, domainAluno.temDireitoACursosExtras());
+        return toResponseDTO(saved);
     }
 
-    public List<AlunoResponseDTO> listarTodos() {
-        return alunoRepository.findAll().stream().map(entity -> {
-            Aluno domainAluno = new Aluno(entity.isCursoConcluido(), entity.getMediaFinal());
-            domainAluno.processarEncerramentoDoCurso();
-            return toResponseDTO(entity, domainAluno.temDireitoACursosExtras());
-        }).toList();
-    }
-
-    public AlunoResponseDTO atualizar(Long id, AlunoRequestDTO dto) {
+    public AlunoResponseDTO acumularNovoCurso(Long id, AlunoRequestDTO dto) {
         AlunoEntity entity = alunoRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Aluno não encontrado com o ID: " + id));
+                .orElseThrow(() -> new RuntimeException("Aluno não encontrado com ID: " + id));
 
         Aluno domainAluno = new Aluno(dto.cursoConcluido(), dto.mediaFinal());
         domainAluno.processarEncerramentoDoCurso();
 
-        entity.setNome(dto.nome());
+        // Atualiza nota/status do último curso e soma os novos cursos ao saldo existente
         entity.setCursoConcluido(dto.cursoConcluido());
         entity.setMediaFinal(dto.mediaFinal());
-        entity.setQuantidadeCursosExtras(domainAluno.getQuantidadeCursosExtras());
+        entity.acumularCursosExtras(domainAluno.getQuantidadeCursosExtras());
 
         AlunoEntity updated = alunoRepository.save(entity);
-        return toResponseDTO(updated, domainAluno.temDireitoACursosExtras());
+        return toResponseDTO(updated);
     }
 
-    public void deletar(Long id) {
-        if (!alunoRepository.existsById(id)) {
-            throw new RuntimeException("Aluno não encontrado com o ID: " + id);
+    public AlunoResponseDTO resgatarCursoExtra(Long id) {
+        AlunoEntity entity = alunoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Aluno não encontrado com ID: " + id));
+
+        if (entity.getQuantidadeCursosExtras() <= 0) {
+            throw new RuntimeException("Aluno não possui saldo de cursos extras para resgatar!");
         }
-        alunoRepository.deleteById(id);
+
+        entity.usarCursoExtra(); // Subtrai 1 do saldo acumulado
+        AlunoEntity updated = alunoRepository.save(entity);
+        return toResponseDTO(updated);
     }
 
-    private AlunoResponseDTO toResponseDTO(AlunoEntity entity, boolean temDireito) {
+    public List<AlunoResponseDTO> listarTodos() {
+        return alunoRepository.findAll().stream().map(this::toResponseDTO).toList();
+    }
+
+    private AlunoResponseDTO toResponseDTO(AlunoEntity entity) {
         return new AlunoResponseDTO(
                 entity.getId(),
                 entity.getNome(),
                 entity.isCursoConcluido(),
                 entity.getMediaFinal(),
                 entity.getQuantidadeCursosExtras(),
-                temDireito
+                entity.getQuantidadeCursosExtras() > 0,
+                entity.getMensagem()
         );
     }
 }

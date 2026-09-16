@@ -13,7 +13,8 @@ public class AlunoEntity {
     private String nome;
     private boolean cursoConcluido;
     private double mediaFinal;
-    private int quantidadeCursosExtras;
+    private int quantidadeCursosExtras = 0;
+    private String mensagem;
 
     public AlunoEntity() {}
 
@@ -21,6 +22,16 @@ public class AlunoEntity {
         this.nome = nome;
         this.cursoConcluido = cursoConcluido;
         this.mediaFinal = mediaFinal;
+    }
+
+    public void acumularCursosExtras(int quantidade) {
+        this.quantidadeCursosExtras += quantidade;
+    }
+
+    public void usarCursoExtra() {
+        if (this.quantidadeCursosExtras > 0) {
+            this.quantidadeCursosExtras--;
+        }
     }
 
     public Long getId() { return id; }
@@ -37,4 +48,7 @@ public class AlunoEntity {
 
     public int getQuantidadeCursosExtras() { return quantidadeCursosExtras; }
     public void setQuantidadeCursosExtras(int quantidadeCursosExtras) { this.quantidadeCursosExtras = quantidadeCursosExtras; }
+
+    public String getMensagem() { return mensagem; }
+    public void setMensagem(String mensagem) { this.mensagem = mensagem; }
 }
