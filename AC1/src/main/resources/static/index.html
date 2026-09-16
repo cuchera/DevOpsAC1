@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Educação Continuada Gamificada — Cursos Extras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased font-sans p-6">
+
+<div id="app" class="max-w-4xl mx-auto">
+
+    <!-- Cabeçalho -->
+    <header class="mb-8 text-center">
+        <h1 class="text-3xl font-bold text-indigo-700">🎓 Gamificação de Cursos Extras</h1>
+        <p class="text-slate-600 mt-1">Acumule e resgate cursos extras conforme conclui novas etapas</p>
+    </header>
+
+    <!-- Formulário Principal: Novo Cadastro / Concluir +1 Curso -->
+    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
+        <h2 class="text-xl font-semibold mb-4 text-slate-700">
+            {{ alunoSelecionadoId ? `🎓 Registrar +1 Curso para (ID: ${alunoSelecionadoId})` : '➕ Cadastrar Primeiro Curso do Aluno' }}
+        </h2>
+
+        <form @submit.prevent="salvar" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-slate-700 mb-1">Nome do Aluno</label>
+                <input
+                        v-model="form.nome"
+                        type="text"
+                        placeholder="Ex: Gabriel Silva"
+                        :disabled="!!alunoSelecionadoId"
+                        required
+                        class="w-full border-slate-300 rounded-lg shadow-sm p-2.5 border focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100"
+                >
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Média Final do Curso</label>
+                    <input
+                            v-model.number="form.mediaFinal"
+                            type="number"
+                            step="0.1"
+                            min="0"
+                            max="10"
+                            placeholder="Ex: 8.5"
+                            required
+                            class="w-full border-slate-300 rounded-lg shadow-sm p-2.5 border focus:ring-indigo-500 focus:border-indigo-500"
+                    >
+                </div>
+
+                <div class="flex items-center pt-6">
+                    <label class="inline-flex items-center cursor-pointer">
+                        <input v-model="form.cursoConcluido" type="checkbox" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                        <span class="ml-3 text-sm font-medium text-slate-700">Curso Concluído?</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+                <button
+                        type="submit"
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg transition"
+                >
+                    {{ alunoSelecionadoId ? 'Concluir Curso e Acumular Recompensa (+3)' : 'Cadastrar e Processar Encerramento' }}
+                </button>
+
+                <button
+                        v-if="alunoSelecionadoId"
+                        @click="cancelarSelecao"
+                        type="button"
+                        class="bg-slate-400 hover:bg-slate-500 text-white font-semibold py-2.5 px-4 rounded-lg transition"
+                >
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tabela de Alunos e Saldo Gamificado -->
+    <div class="bg-white p-6 rounded-xl shadow-md">
+        <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-semibold text-slate-700">📋 Painel do Aluno e Saldo</h2>
+            <button @click="carregarAlunos" class="text-sm text-indigo-600 hover:underline flex items-center gap-1">
+                🔄 Atualizar Tabela
+            </button>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="bg-slate-100 border-b">
+                    <th class="p-3 text-sm font-semibold text-slate-600">ID</th>
+                    <th class="p-3 text-sm font-semibold text-slate-600">Nome</th>
+                    <th class="p-3 text-sm font-semibold text-slate-600">Última Média</th>
+                    <th class="p-3 text-sm font-semibold text-slate-600">Status</th>
+                    <th class="p-3 text-sm font-semibold text-slate-600">Saldo Cursos Extras</th>
+                    <th class="p-3 text-sm font-semibold text-slate-600 text-center">Ações Gamificadas</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="aluno in alunos" :key="aluno.id" class="border-b hover:bg-slate-50 transition">
+                    <td class="p-3 font-mono text-sm">{{ aluno.id }}</td>
+                    <td class="p-3 font-medium text-slate-800">{{ aluno.nome }}</td>
+                    <td class="p-3 font-bold">{{ aluno.mediaFinal }}</td>
+                    <td class="p-3">
+                <span
+                        :class="aluno.cursoConcluido ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
+                        class="px-2.5 py-1 text-xs font-semibold rounded-full"
+                >
+                  {{ aluno.cursoConcluido ? 'Concluído' : 'Pendente' }}
+                </span>
+                    </td>
+                    <td class="p-3">
+                <span
+                        :class="aluno.quantidadeCursosExtras > 0 ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-slate-100 text-slate-500'"
+                        class="px-3 py-1.5 text-xs font-bold rounded-full border"
+                >
+                  🎁 {{ aluno.quantidadeCursosExtras }} Cursos Disponíveis
+                </span>
+                    </td>
+                    <td class="p-3 text-center space-x-2">
+                        <button
+                                @click="prepararNovoCurso(aluno)"
+                                class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-xs px-2.5 py-1.5 rounded-md border border-blue-200 transition"
+                        >
+                            +1 Curso (+3)
+                        </button>
+                        <button
+                                @click="resgatarExtra(aluno.id)"
+                                :disabled="aluno.quantidadeCursosExtras <= 0"
+                                class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium text-xs px-2.5 py-1.5 rounded-md border border-amber-200 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                        >
+                            Resgatar (-1)
+                        </button>
+                    </td>
+                </tr>
+                <tr v-if="alunos.length === 0">
+                    <td colspan="6" class="text-center p-6 text-slate-400">Nenhum aluno cadastrado. Adicione um acima!</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    const { createApp, ref, onMounted } = Vue;
+
+    createApp({
+        setup() {
+            const API_URL = 'http://localhost:8080/api/alunos';
+            const alunos = ref([]);
+            const alunoSelecionadoId = ref(null);
+            const form = ref({
+                nome: '',
+                cursoConcluido: true,
+                mediaFinal: null
+            });
+
+            const carregarAlunos = async () => {
+                try {
+                    const res = await axios.get(API_URL);
+                    alunos.value = res.data;
+                } catch (err) {
+                    console.error("Erro ao carregar alunos:", err);
+                }
+            };
+
+            const salvar = async () => {
+                try {
+                    if (alunoSelecionadoId.value) {
+                        // Executa o acúmulo de +1 curso no saldo
+                        await axios.post(`${API_URL}/${alunoSelecionadoId.value}/concluir-outro-curso`, form.value);
+                    } else {
+                        // Executa o 1º cadastro
+                        await axios.post(`${API_URL}/processar-encerramento`, form.value);
+                    }
+                    limparFormulario();
+                    await carregarAlunos();
+                } catch (err) {
+                    alert("Erro ao processar requisição. Verifique se a API Spring Boot está ativa na porta 8080.");
+                    console.error(err);
+                }
+            };
+
+            const resgatarExtra = async (id) => {
+                try {
+                    await axios.post(`${API_URL}/${id}/resgatar-curso-extra`);
+                    await carregarAlunos();
+                } catch (err) {
+                    alert("Não foi possível resgatar o curso extra.");
+                    console.error(err);
+                }
+            };
+
+            const prepararNovoCurso = (aluno) => {
+                alunoSelecionadoId.value = aluno.id;
+                form.value = {
+                    nome: aluno.nome,
+                    cursoConcluido: true,
+                    mediaFinal: null
+                };
+            };
+
+            const cancelarSelecao = () => {
+                limparFormulario();
+            };
+
+            const limparFormulario = () => {
+                alunoSelecionadoId.value = null;
+                form.value = { nome: '', cursoConcluido: true, mediaFinal: null };
+            };
+
+            onMounted(carregarAlunos);
+
+            return {
+                alunos,
+                form,
+                alunoSelecionadoId,
+                salvar,
+                prepararNovoCurso,
+                resgatarExtra,
+                cancelarSelecao,
+                carregarAlunos
+            };
+        }
+    }).mount('#app');
+</script>
+</body>
+</html>

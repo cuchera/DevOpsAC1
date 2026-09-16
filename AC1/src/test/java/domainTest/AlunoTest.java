@@ -1,6 +1,7 @@
 package domainTest;
 
 import domain.Aluno;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -46,4 +47,20 @@ class AlunoTest {
         assertFalse(aluno.temDireitoACursosExtras());
         assertEquals(0, aluno.getQuantidadeCursosExtras());
     }
+
+    @Test
+    @DisplayName("BDD 3 - Ariane - informa direito a recuperação quando média for igual a 7.0")
+    void deveInformarDireitoARecuperacaoQuandoMediaForIgualASete() {
+        // Dado uma aluna instanciada com média 7.0
+        Aluno aluno = new Aluno(true, 7.0);
+
+        // Quando o sistema processa o encerramento
+        aluno.processarEncerramentoDoCurso();
+
+        // Então informa a recuperação e não libera cursos extras
+        assertEquals("Aluno tem direito a uma recuperação", aluno.getMensagem());
+        assertEquals(0, aluno.getQuantidadeCursosExtras());
+        assertFalse(aluno.temDireitoACursosExtras());
+    }
+
 }
