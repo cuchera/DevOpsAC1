@@ -18,71 +18,27 @@
 * **Então** ele deve ter direito a escolher mais três cursos.
 
 
-
 ### Implementação com TDD
 
-A implementação foi desenvolvida seguindo o ciclo RED, GREEN e BLUE.
-
-#### 🔴 RED
-
-O teste foi criado para validar que, após a matrícula no terceiro curso adicional, o aluno deve receber acesso ao curso.
-
-Nesta etapa, o teste foi executado antes da implementação da funcionalidade de acesso ao curso extra. O teste falhou conforme esperado, pois o método `temAcessoAoCursoExtra()` ainda não existia na classe `Aluno`.
-
-O erro apresentado foi:
-
-![RED BDD-4.png](RED%20BDD-4.png)
-
-* **Esperado:** verificar se o aluno possui acesso ao curso extra;
-* **Obtido:** erro de compilação, pois o método `temAcessoAoCursoExtra()` não estava implementado.
-
-Essa falha comprova que o teste foi criado antes da implementação da regra, caracterizando a etapa RED.
-
-#### 🟢 GREEN
-
-Após a falha do teste, foi implementada a funcionalidade mínima necessária na classe `Aluno`.
-
-Foi adicionada a propriedade responsável por controlar o acesso ao curso extra:
-
-```java
-private boolean acessoAoCursoExtra;
-```
-
-![img.png](img.png)
-
-Também foi implementado o método `temAcessoAoCursoExtra()` e ajustado o método `matricularCursoExtra()` para conceder o acesso ao curso quando houver saldo disponível.
-
-Após a implementação, os testes foram executados novamente e apresentaram:
-
-![GREEN BDD-4.png](GREEN%20BDD-4.png)
-
-Dessa forma, o teste passou conforme esperado, concluindo a etapa GREEN.
-
-#### 🔵 BLUE
-
-Após o GREEN, a implementação foi revisada buscando melhorar a organização do código sem alterar o comportamento validado pelos testes.
-
-A lógica de concessão de acesso ao curso extra foi extraída para um método específico, `concederAcessoAoCursoExtra()`, mantendo a responsabilidade da matrícula separada da responsabilidade de conceder o acesso.
-
-![img_1.png](img_1.png)
+A lógica de concessão de acesso ao curso extra foi extraída para um método
 
 Após a refatoração, os testes devem continuar sendo executados para garantir que o comportamento anteriormente validado permaneça funcionando.
 Antes de qualquer implementação, o teste foi executado e falhou conforme esperado, comprovando que ele realmente testa a regra de negócio e não um "green falso".
 
-![Evidência RED — teste falhando](image.png)
+![Evidência RED — teste falhando](evidencias/Gabriel/image.png)
 
 #### 🟢 GREEN
 
 Com a implementação de `Aluno.encerrarCurso()` feita, o teste principal passou. Nesta etapa a cobertura de código ainda não estava em 100% — o branch referente ao cenário de média inferior a 7,0 seria coberto posteriormente pelo BDD 2 (Leonardo), como parte do trabalho dividido entre a equipe.
 
-![Evidência GREEN — teste passando](image-1.png)
+![Evidência GREEN — teste passando](evidencias/Gabriel/image-1.png)
 
 #### 🔵 BLUE
 
 Após o GREEN, a classe `Aluno` foi revisada (ajustes de formatação e nomenclatura) e testes complementares foram adicionados para fechar os branches não cobertos. Com isso, a suíte de testes atingiu 100% de cobertura, sem necessidade de refatoração adicional na lógica de negócio.
 
-![Evidência BLUE — cobertura de 100% no JaCoCo](image-2.png)
-![Evidência BLUE — relatório detalhado](image-3.png)
+![Evidência BLUE — cobertura de 100% no JaCoCo](evidencias/Gabriel/image-2.png)
+![Evidência BLUE — relatório detalhado](evidencias/Gabriel/image-3.png)
 
 ### Arquivos implementados
 
@@ -93,6 +49,7 @@ Após o GREEN, a classe `Aluno` foi revisada (ajustes de formatação e nomencla
 
 * Aluno com curso concluído e média igual ou superior a 7,0 recebe três cursos extras.
 * Aluno com média inferior a 7,0 não recebe cursos extras (branch complementado pelo BDD 2 — Leonardo).
+
 
 ## Participação individual — Leonardo
 
@@ -215,3 +172,56 @@ branches, linhas e métodos da classe Aluno.
 ![BLUE — cobertura da classe Aluno](evidencias/Ariane/BDD3-BLUE-JACOCO-100.png)
 
 ![BLUE — testes após a refatoração](evidencias/Ariane/BDD3-BLUE.png)
+
+
+
+## Participação individual — Luiz
+
+### BDD 4 — Luiz
+
+
+#### 🔴 RED
+
+O teste foi criado para validar que, após a matrícula no terceiro curso adicional, o aluno deve receber acesso ao curso.
+
+Nesta etapa, o teste foi executado antes da implementação da funcionalidade de acesso ao curso extra. O teste falhou conforme esperado, pois o método `temAcessoAoCursoExtra()` ainda não existia na classe `Aluno`.
+
+O erro apresentado foi:
+
+![RED BDD-4.png](evidencias/Luiz/RED%20BDD-4.png)
+
+* **Esperado:** verificar se o aluno possui acesso ao curso extra;
+* **Obtido:** erro de compilação, pois o método `temAcessoAoCursoExtra()` não estava implementado.
+
+Essa falha comprova que o teste foi criado antes da implementação da regra, caracterizando a etapa RED.
+
+#### 🟢 GREEN
+
+Após a falha do teste, foi implementada a funcionalidade mínima necessária na classe `Aluno`.
+
+Foi adicionada a propriedade responsável por controlar o acesso ao curso extra:
+
+```java
+private boolean acessoAoCursoExtra;
+```
+
+![img.png](evidencias/Luiz/img.png)
+
+Também foi implementado o método `temAcessoAoCursoExtra()` e ajustado o método `matricularCursoExtra()` para conceder o acesso ao curso quando houver saldo disponível.
+
+Após a implementação, os testes foram executados novamente e apresentaram:
+
+![GREEN BDD-4.png](evidencias/Luiz/GREEN%20BDD-4.png)
+
+Dessa forma, o teste passou conforme esperado, concluindo a etapa GREEN.
+
+#### 🔵 BLUE
+
+Após o GREEN, a implementação foi revisada buscando melhorar a organização do código sem alterar o comportamento validado pelos testes.
+
+A lógica de concessão de acesso ao curso extra foi extraída para um método específico, `concederAcessoAoCursoExtra()`, mantendo a responsabilidade da matrícula separada da responsabilidade de conceder o acesso.
+
+![img_1.png](evidencias/Luiz/img_1.png)
+
+Após a refatoração, os testes devem continuar sendo executados para garantir que o comportamento anteriormente validado permaneça funcionando.
+Antes de qualquer implementação, o teste foi executado e falhou conforme esperado, comprovando que ele realmente testa a regra de negócio e não um "green falso".
