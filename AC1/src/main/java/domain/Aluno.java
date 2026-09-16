@@ -2,24 +2,34 @@ package domain;
 
 public class Aluno {
 
-    private final String nome;
-    private int cursosExtrasDisponiveis = 0;
+    private static final double MEDIA_MINIMA_PARA_CURSOS_EXTRAS = 7.0;
+    private static final int QUANTIDADE_DE_CURSOS_EXTRAS = 3;
 
-    public Aluno(String nome) {
-            this.nome = nome;
-        }
+    private final boolean cursoConcluido;
+    private final double mediaFinal;
+    private int quantidadeCursosExtras;
 
-        public void encerrarCurso(double mediaFinal) {
-            if (mediaFinal >= 7.0) {
-                this.cursosExtrasDisponiveis = this.cursosExtrasDisponiveis + 3;
-            };
-        }
-
-        public int getCursosExtrasDisponiveis() {
-            return cursosExtrasDisponiveis;
-        }
-
-        public String getNome() {
-            return nome;
-        }
+    public Aluno(boolean cursoConcluido, double mediaFinal) {
+        this.cursoConcluido = cursoConcluido;
+        this.mediaFinal = mediaFinal;
     }
+
+    public void processarEncerramentoDoCurso() {
+        quantidadeCursosExtras = alunoAtendeAosCriterios()
+                ? QUANTIDADE_DE_CURSOS_EXTRAS
+                : 0;
+    }
+
+    private boolean alunoAtendeAosCriterios() {
+        return cursoConcluido
+                && mediaFinal > MEDIA_MINIMA_PARA_CURSOS_EXTRAS;
+    }
+
+    public boolean temDireitoACursosExtras() {
+        return quantidadeCursosExtras == QUANTIDADE_DE_CURSOS_EXTRAS;
+    }
+
+    public int getQuantidadeCursosExtras() {
+        return quantidadeCursosExtras;
+    }
+}
