@@ -62,19 +62,61 @@ class AlunoTest {
         assertEquals(0, aluno.getQuantidadeCursosExtras());
         assertFalse(aluno.temDireitoACursosExtras());
     }
-    
+
     @Test
     void deveConcederAcessoAoTerceiroCursoExtra() {
+        Aluno aluno = new Aluno(true, 8.0);
+        aluno.processarEncerramentoDoCurso();
 
-        Aluno aluno = new Aluno();
-        aluno.setCursosExtras(3);
-
-        aluno.matricularCursoExtra();
-        aluno.matricularCursoExtra();
+        assertEquals(3, aluno.getQuantidadeCursosExtras());
 
         aluno.matricularCursoExtra();
+        assertEquals(2, aluno.getQuantidadeCursosExtras());
 
+        aluno.matricularCursoExtra();
+        assertEquals(1, aluno.getQuantidadeCursosExtras());
+
+        aluno.matricularCursoExtra();
+        assertEquals(0, aluno.getQuantidadeCursosExtras());
         assertTrue(aluno.temAcessoAoCursoExtra());
+
+        aluno.matricularCursoExtra();
+        assertEquals(0, aluno.getQuantidadeCursosExtras());
     }
 
-}
+        @Test
+        void naoDeveConcederAcessoSemSaldo() {
+            Aluno aluno = new Aluno(true, 6.9);
+            aluno.processarEncerramentoDoCurso();
+
+            aluno.matricularCursoExtra();
+
+            assertEquals(0, aluno.getQuantidadeCursosExtras());
+            assertFalse(aluno.temAcessoAoCursoExtra());
+        }
+
+    @Test
+    void devePreservarDadosInformadosNoCadastro() {
+        Aluno aluno = new Aluno("Leonardo", true, 8.5);
+
+        assertEquals("Leonardo", aluno.getNome());
+        assertTrue(aluno.isCursoConcluido());
+        assertEquals(8.5, aluno.getMediaFinal(), 0.001);
+    }
+
+    @Test
+    void deveAtualizarSaldoEConsumirCreditoNaMatricula() {
+        Aluno aluno = new Aluno(true, 8.0);
+
+        aluno.setCursosExtras(3);
+
+        assertEquals(3, aluno.getCursosExtras());
+        assertEquals(3, aluno.getQuantidadeCursosExtras());
+
+        aluno.matricularCursoExtra();
+
+        assertEquals(2, aluno.getCursosExtras());
+        assertEquals(2, aluno.getQuantidadeCursosExtras());
+        assertTrue(aluno.temAcessoAoCursoExtra());
+    }
+    }

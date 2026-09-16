@@ -2,12 +2,12 @@ package domain;
 
 public class Aluno {
 
-    private int cursosExtras;
+
     private boolean acessoAoCursoExtra;
 
     public void matricularCursoExtra() {
-        if (cursosExtras > 0) {
-            cursosExtras--;
+        if (quantidadeCursosExtras > 0) {
+            quantidadeCursosExtras--;
             concederAcessoAoCursoExtra();
         }
     }
@@ -21,11 +21,12 @@ public class Aluno {
     }
 
     public int getCursosExtras() {
-        return cursosExtras;
+        return quantidadeCursosExtras;
     }
 
     public void setCursosExtras(int cursosExtras) {
-        this.cursosExtras = cursosExtras;
+        this.quantidadeCursosExtras = cursosExtras;
+    }
     private static final double MEDIA_MINIMA_PARA_CURSOS_EXTRAS = 7.0;
     private static final int QUANTIDADE_DE_CURSOS_EXTRAS = 3;
 
