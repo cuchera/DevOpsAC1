@@ -133,12 +133,12 @@ Avalia os critérios do aluno (curso concluído e média final > 7.0), calcula a
 * **Headers:** `Content-Type: application/json`
 
 #### Exemplo de Requisição (Request Body):
-```json
-{
-  "nome": "Gabriel",
-  "cursoConcluido": true,
-  "mediaFinal": 8.5
-}
+    ```json
+    {
+      "nome": "Gabriel",
+      "cursoConcluido": true,
+      "mediaFinal": 8.5
+    }
 
 ![alt text](image-4.png)
 
@@ -171,4 +171,46 @@ Retorna a lista completa com todos os alunos cadastrados no banco de dados e o s
     }
   ]
 
-  ![alt text](image-5.png)
+![alt text](image-5.png)
+
+### 3. Atualizar Aluno por ID
+Atualiza as informações de um aluno existente e reavalia a elegibilidade aos cursos extras com base nas novas informações.
+
+* **URL:** `/api/alunos/{id}`
+* **Método:** `PUT`
+* **Headers:** `Content-Type: application/json`
+
+    ```json
+    {
+      "nome": "Gabriel",
+      "cursoConcluido": true,
+      "mediaFinal": 8.5
+    }
+
+Respostas (Responses):
+    
+    {
+    "id": 1,
+    "nome": "Gabriel Silva",
+    "cursoConcluido": true,
+    "mediaFinal": 9.0,
+    "quantidadeCursosExtras": 3,
+    "temDireitoACursosExtras": true
+    }
+
+or
+
+404 Not Found — Nenhum aluno encontrado com o ID informado.
+
+### 2. Atualizar Aluno por ID   
+Exclui permanentemente um registro de aluno do banco de dados.
+
+* **URL:** `/api/alunos/{id}`
+* **Método:** `DELETE`
+* **Parâmetro de URL:** `id`
+
+Respostas (Responses):
+
+204 No Content — Aluno removido com sucesso (sem corpo de resposta).
+
+404 Not Found — Nenhum aluno encontrado com o ID informado.

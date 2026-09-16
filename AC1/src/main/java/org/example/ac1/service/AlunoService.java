@@ -19,16 +19,13 @@ public class AlunoService {
     }
 
     public AlunoResponseDTO processarEncerramento(AlunoRequestDTO dto) {
-        // Executa a regra do Domínio (TDD)
         Aluno domainAluno = new Aluno(dto.cursoConcluido(), dto.mediaFinal());
         domainAluno.processarEncerramentoDoCurso();
 
-        // Mapeia para a Entidade JPA
         AlunoEntity entity = new AlunoEntity(dto.nome(), dto.cursoConcluido(), dto.mediaFinal());
         entity.setQuantidadeCursosExtras(domainAluno.getQuantidadeCursosExtras());
 
         AlunoEntity saved = alunoRepository.save(entity);
-
         return toResponseDTO(saved, domainAluno.temDireitoACursosExtras());
     }
 
@@ -38,6 +35,29 @@ public class AlunoService {
             domainAluno.processarEncerramentoDoCurso();
             return toResponseDTO(entity, domainAluno.temDireitoACursosExtras());
         }).toList();
+    }
+
+    public AlunoResponseDTO atualizar(Long id, AlunoRequestDTO dto) {
+        AlunoEntity entity = alunoRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Aluno não encontrado com o ID: " + id));
+
+        Aluno domainAluno = new Aluno(dto.cursoConcluido(), dto.mediaFinal());
+        domainAluno.processarEncerramentoDoCurso();
+
+        entity.setNome(dto.nome());
+        entity.setCursoConcluido(dto.cursoConcluido());
+        entity.setMediaFinal(dto.mediaFinal());
+        entity.setQuantidadeCursosExtras(domainAluno.getQuantidadeCursosExtras());
+
+        AlunoEntity updated = alunoRepository.save(entity);
+        return toResponseDTO(updated, domainAluno.temDireitoACursosExtras());
+    }
+
+    public void deletar(Long id) {
+        if (!alunoRepository.existsById(id)) {
+            throw new RuntimeException("Aluno não encontrado com o ID: " + id);
+        }
+        alunoRepository.deleteById(id);
     }
 
     private AlunoResponseDTO toResponseDTO(AlunoEntity entity, boolean temDireito) {
