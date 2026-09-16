@@ -46,4 +46,11 @@ public class AlunoController {
     public ResponseEntity<List<AlunoResponseDTO>> listarTodos() {
         return ResponseEntity.ok(alunoService.listarTodos());
     }
+
+    @DeleteMapping("/{id}")
+    @Operation(summary = "5. Exclui um aluno do sistema pelo ID")
+    public ResponseEntity<Void> deletar(@PathVariable Long id) {
+        alunoService.deletar(id);
+        return ResponseEntity.noContent().build();
+    }
 }

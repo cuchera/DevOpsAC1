@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Gestão de Cursos Extras - AC1</title>
-    <!-- Tailwind CSS via CDN para estilização básica -->
+    <!-- Tailwind CSS via CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Vue.js 3 e Axios via CDN -->
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -35,7 +35,7 @@
         </div>
         <button @click="mensagemAlerta = ''" class="text-blue-600 font-bold hover:text-blue-800">✕</button>
     </div>
-    
+
 
     <!-- Formulário de Cadastro / Lançamento -->
     <div class="bg-white p-6 rounded-lg shadow border border-gray-200">
@@ -152,7 +152,6 @@
                     <td class="p-3 border-r border-gray-200 font-bold text-blue-700">
                         {{ aluno.quantidadeCursosExtras }} disponíve(is)
                     </td>
-                    <!-- COLUNA MENSAGEM DO SISTEMA -->
                     <td class="p-3 border-r border-gray-200 text-xs text-gray-700 italic font-medium">
                         {{ aluno.mensagem || 'Sem mensagens' }}
                     </td>
@@ -169,6 +168,12 @@
                                 class="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs font-medium px-2.5 py-1 rounded border border-gray-300 disabled:opacity-40 disabled:cursor-not-allowed transition"
                         >
                             Usar Extra (-1)
+                        </button>
+                        <button
+                                @click="deletar(aluno.id)"
+                                class="bg-red-100 hover:bg-red-200 text-red-700 text-xs font-medium px-2.5 py-1 rounded border border-red-300 transition"
+                        >
+                            Excluir
                         </button>
                     </td>
                 </tr>
@@ -215,7 +220,6 @@
                         response = await axios.post(`${API_URL}/processar-encerramento`, form.value);
                     }
 
-                    // Exibe a mensagem do sistema retornada pelo Java
                     if (response.data && response.data.mensagem) {
                         mensagemAlerta.value = response.data.mensagem;
                     }
@@ -238,6 +242,18 @@
                     await carregarAlunos();
                 } catch (err) {
                     alert("Erro ao resgatar curso extra.");
+                }
+            };
+
+            const deletar = async (id) => {
+                if (confirm(`Tem certeza que deseja excluir o aluno ID #${id}?`)) {
+                    try {
+                        await axios.delete(`${API_URL}/${id}`);
+                        mensagemAlerta.value = `Aluno #${id} excluído com sucesso!`;
+                        await carregarAlunos();
+                    } catch (err) {
+                        alert("Erro ao excluir o aluno.");
+                    }
                 }
             };
 
@@ -264,6 +280,7 @@
                 mensagemAlerta,
                 salvar,
                 resgatar,
+                deletar,
                 prepararNovoCurso,
                 cancelar,
                 carregarAlunos
