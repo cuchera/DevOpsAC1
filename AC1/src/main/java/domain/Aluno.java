@@ -12,8 +12,11 @@ public class Aluno {
     }
 
     public void processarEncerramentoDoCurso() {
-        // Implementação propositalmente incorreta para demonstrar o RED.
-        quantidadeCursosExtras = 3;
+        if (cursoConcluido && mediaFinal > 7.0) {
+            quantidadeCursosExtras = 3;
+        } else {
+            quantidadeCursosExtras = 0;
+        }
     }
 
     public boolean temDireitoACursosExtras() {
