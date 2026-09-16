@@ -118,3 +118,57 @@ O relatório do JaCoCo apresentou:
 * Aluno com média inferior a 7,0 não recebe cursos extras.
 * Aluno que ainda não concluiu o curso não recebe cursos extras.
 >>>>>>> Leonardo
+
+### Documentação dos Endpoints da API
+
+A API segue os padrões RESTful, utilizando os verbos HTTP adequados, códigos de status semânticos e payload em formato JSON.
+
+---
+
+### 1. Processar Encerramento e Cadastrar Aluno
+Avalia os critérios do aluno (curso concluído e média final > 7.0), calcula a quantidade de cursos extras concedidos e persiste o registro no banco de dados.
+
+* **URL:** `/api/alunos/processar-encerramento`
+* **Método:** `POST`
+* **Headers:** `Content-Type: application/json`
+
+#### Exemplo de Requisição (Request Body):
+```json
+{
+  "nome": "Gabriel",
+  "cursoConcluido": true,
+  "mediaFinal": 8.5
+}
+
+![alt text](image-4.png)
+
+### 2. Listar Todos os Alunos
+Retorna a lista completa com todos os alunos cadastrados no banco de dados e o status atualizado de elegibilidade para cursos extras.
+
+* **URL:** `/api/alunos`
+* **Método:** `GET`
+* **Headers:** `Accept: application/json`
+
+#### Respostas (Responses):
+* **`200 OK`** — Requisição realizada com sucesso. Retorna uma lista em JSON contendo os registros encontrados.
+  ```json
+  [
+    {
+      "id": 1,
+      "nome": "Gabriel",
+      "cursoConcluido": true,
+      "mediaFinal": 8.5,
+      "quantidadeCursosExtras": 3,
+      "temDireitoACursosExtras": true
+    },
+    {
+      "id": 2,
+      "nome": "Lucas",
+      "cursoConcluido": true,
+      "mediaFinal": 6.0,
+      "quantidadeCursosExtras": 0,
+      "temDireitoACursosExtras": false
+    }
+  ]
+
+  ![alt text](image-5.png)
