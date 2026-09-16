@@ -1,4 +1,4 @@
-package repository;
+package org.example.ac1.repository;
 
 import entity.AlunoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -1,4 +1,4 @@
-package dto;
+package org.example.ac1.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
