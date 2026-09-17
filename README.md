@@ -225,3 +225,37 @@ A lógica de concessão de acesso ao curso extra foi extraída para um método e
 
 Após a refatoração, os testes devem continuar sendo executados para garantir que o comportamento anteriormente validado permaneça funcionando.
 Antes de qualquer implementação, o teste foi executado e falhou conforme esperado, comprovando que ele realmente testa a regra de negócio e não um "green falso".
+
+## Docker e Banco de Dados
+
+A aplicação foi configurada para execução com Docker, utilizando PostgreSQL em container e Spring Boot em outro container.
+
+### Estrutura utilizada
+
+- Spring Boot
+- PostgreSQL 16
+- Docker
+- Docker Compose
+- Profile H2 para desenvolvimento/testes
+- Profile PostgreSQL para execução via Docker
+
+### Execução
+
+Para subir os containers:
+
+```bash
+docker compose up -d --build
+```
+Para verificar os containers em execução:
+
+```bash
+docker ps
+```
+
+A aplicação fica disponível em:
+
+http://localhost:8081
+
+O PostgreSQL fica disponível na porta:
+
+5432
