@@ -10,7 +10,7 @@ def mvnw(String args) {
     if (isUnix()) {
         sh "chmod +x mvnw && ./mvnw ${args}"
     } else {
-        bat "call AC1/mvnw.cmd ${args}"
+        bat "call .\\mvnw.cmd ${args}"
     }
 }
 
