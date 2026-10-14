@@ -7,10 +7,12 @@ def runCmd(String command) {
 }
 
 def mvnw(String args) {
-    if (isUnix()) {
-        sh "chmod +x mvnw && ./mvnw ${args}"
-    } else {
-        bat "call .\\mvnw.cmd ${args}"
+    dir('AC1'){
+        if (isUnix()) {
+                sh "chmod +x mvnw && ./mvnw ${args}"
+            } else {
+                bat "call .\\mvnw.cmd ${args}"
+            }
     }
 }
 
