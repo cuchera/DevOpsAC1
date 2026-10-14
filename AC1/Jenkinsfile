@@ -128,7 +128,7 @@ pipeline {
             steps {
                 script {
                     runCmd('docker compose -f ' + env.COMPOSE_FILE + ' down --remove-orphans')
-                    runCmd('docker compose -f ' + env.COMPOSE_FILE + ' up -d postgres pgadmin app prometheus grafana')
+                    runCmd('docker compose -f ' + env.COMPOSE_FILE + ' up -d postgres pgadmin app')
                 }
             }
         }
