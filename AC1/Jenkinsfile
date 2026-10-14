@@ -103,7 +103,7 @@ pipeline {
         }
 
         stage('5 - CD - Build dos Containers') {
-            steps { script { runCmd('docker compose -f ' + env.COMPOSE_FILE + ' build api bff') } }
+            steps { script { runCmd('docker compose -f ' + env.COMPOSE_FILE + ' build app') } }
         }
 
         stage('6 - Registry - Docker Hub (opcional)') {
