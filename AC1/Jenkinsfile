@@ -7,13 +7,35 @@ def runCmd(String command) {
 }
 
 def mvnw(String args) {
-    dir('AC1'){
+    dir('AC1') {
         if (isUnix()) {
-                sh "chmod +x mvnw && ./mvnw ${args}"
-            } else {
-                bat "call .\\mvnw.cmd ${args}"
-            }
+            sh "chmod +x mvnw && ./mvnw ${args}"
+        } else {
+            bat "call .\\mvnw.cmd ${args}"
+        }
     }
+}
+
+// Tenta o /actuator/health pela porta publicada no host (18 x 5s = 90s)
+def waitForHealth(String port) {
+    String url = "http://localhost:${port}/actuator/health"
+    for (int i = 1; i <= 18; i++) {
+        int rc
+        if (isUnix()) {
+            rc = sh(returnStatus: true, script: "curl -sf ${url}")
+        } else {
+            rc = bat(returnStatus: true, script:
+                'powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing ' + url +
+                '; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"')
+        }
+        if (rc == 0) {
+            echo "API saudavel (tentativa ${i})"
+            return
+        }
+        echo "Aguardando API... (${i}/18)"
+        sleep 5
+    }
+    error('Health check falhou: API nao respondeu em 90s')
 }
 
 pipeline {
@@ -22,18 +44,17 @@ pipeline {
     parameters {
         booleanParam(name: 'PUSH_DOCKER_HUB', defaultValue: false,
             description: 'Opcional: publicar a imagem no Docker Hub apos o build local.')
+        booleanParam(name: 'RUN_E2E', defaultValue: false,
+            description: 'Opcional: rodar Cypress E2E (exige servico cypress com profile e2e no compose).')
     }
 
     environment {
-        DOCKER_IMAGE = 'AC1/Dockerfile'
+        DOCKER_IMAGE = 'ac1-app'
         DOCKER_CREDENTIALS_ID = 'dockerhub-credentials'
         IMAGE_TAG = "${BUILD_NUMBER}"
         COMPOSE_FILE = 'docker-compose.yml'
         API_PORT = '8081'
-        BFF_PORT = '3000'
         PGADMIN_PORT = '5050'
-        PROMETHEUS_PORT = '9091'
-        GRAFANA_PORT = '3001'
     }
 
     stages {
@@ -67,7 +88,6 @@ pipeline {
                     echo '>>> [OK 4/4] DOCKER ENGINE'
 
                     echo '>>> PREFLIGHT CONCLUIDO COM SUCESSO'
-                    echo '[OK] Maven, Node, npm e Cypress globais nao sao obrigatorios.'
                 }
             }
         }
@@ -79,14 +99,14 @@ pipeline {
         stage('2 - CI - JUnit + Testcontainers + JaCoCo') {
             steps {
                 script {
-                    // Inclui ParticipanteRepositoryTest com PostgreSQL 17 real via Testcontainers.
+                    // Inclui ParticipanteRepositoryTest com PostgreSQL real via Testcontainers.
                     mvnw('-B clean test')
                 }
             }
             post {
                 always {
-                    junit testResults: 'target/surefire-reports/*.xml', allowEmptyResults: true
-                    archiveArtifacts artifacts: 'target/site/jacoco/**', allowEmptyArchive: true
+                    junit testResults: 'AC1/target/surefire-reports/*.xml', allowEmptyResults: true
+                    archiveArtifacts artifacts: 'AC1/target/site/jacoco/**', allowEmptyArchive: true
                 }
             }
         }
@@ -94,7 +114,7 @@ pipeline {
         stage('3 - CI - Qualidade PMD') {
             steps { script { mvnw('-B pmd:pmd -DskipTests') } }
             post {
-                always { archiveArtifacts artifacts: 'target/site/pmd.html', allowEmptyArchive: true }
+                always { archiveArtifacts artifacts: 'AC1/target/site/pmd.html', allowEmptyArchive: true }
             }
         }
 
@@ -114,10 +134,13 @@ pipeline {
                     script {
                         if (isUnix()) {
                             sh 'echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USER" --password-stdin'
+                            sh "docker tag ${env.DOCKER_IMAGE}:latest \$DOCKER_USER/${env.DOCKER_IMAGE}:${env.IMAGE_TAG}"
+                            sh "docker push \$DOCKER_USER/${env.DOCKER_IMAGE}:${env.IMAGE_TAG}"
                         } else {
-                            bat 'echo %DOCKER_PASSWORD% | docker login -u %DOCKER_USER% --password-stdin'
+                            bat 'echo %DOCKER_PASSWORD%| docker login -u %DOCKER_USER% --password-stdin'
+                            bat "docker tag ${env.DOCKER_IMAGE}:latest %DOCKER_USER%/${env.DOCKER_IMAGE}:${env.IMAGE_TAG}"
+                            bat "docker push %DOCKER_USER%/${env.DOCKER_IMAGE}:${env.IMAGE_TAG}"
                         }
-                        runCmd("docker push ${env.DOCKER_IMAGE}:${env.IMAGE_TAG}")
                         runCmd('docker logout')
                     }
                 }
@@ -136,11 +159,8 @@ pipeline {
         stage('8 - CD - Health Check HOMOL') {
             steps {
                 script {
-                    // Health check executado de dentro do BFF, pela rede interna do Compose.
-                    // Assim nao dependemos de PowerShell/curl do host nem de --network host.
-                    def healthCmd = "docker compose -f docker-compose.yml exec -T app sh -c wget -qO- http://localhost:8080/actuator/health"
                     try {
-                        runCmd(healthCmd)
+                        waitForHealth(env.API_PORT)
                     } catch (err) {
                         runCmd('docker compose -f ' + env.COMPOSE_FILE + ' ps')
                         runCmd('docker compose -f ' + env.COMPOSE_FILE + ' logs --tail=100 app')
@@ -151,10 +171,11 @@ pipeline {
         }
 
         stage('9 - CD - Cypress E2E em Container') {
+            when { expression { return params.RUN_E2E } }
             steps { script { runCmd('docker compose -f ' + env.COMPOSE_FILE + ' --profile e2e run --rm cypress') } }
             post {
                 always {
-                    archiveArtifacts artifacts: 'frontend/cypress/screenshots/**,frontend/cypress/videos/**', allowEmptyArchive: true
+                    archiveArtifacts artifacts: 'frontend/cypress/screenshots/*,frontend/cypress/videos/*', allowEmptyArchive: true
                 }
             }
         }
@@ -162,19 +183,17 @@ pipeline {
         stage('10 - Observabilidade') {
             steps {
                 echo "API: http://localhost:${API_PORT}"
-                echo "BFF/Front: http://localhost:${BFF_PORT}"
+                echo "Health: http://localhost:${API_PORT}/actuator/health"
                 echo "pgAdmin: http://localhost:${PGADMIN_PORT}"
-                echo "Prometheus: http://localhost:${PROMETHEUS_PORT}"
-                echo "Grafana: http://localhost:${GRAFANA_PORT}"
             }
         }
     }
 
     post {
-        success { echo 'Pipeline V5.1 concluido: Windows/macOS/Linux, Testcontainers, HOMOL, E2E e observabilidade aprovados.' }
+        success { echo 'Pipeline concluido: testes, qualidade, deploy HOMOL e health check aprovados.' }
         failure { echo 'Pipeline interrompido. Consulte o stage e os logs para identificar ambiente, teste ou servico responsavel.' }
         always {
-            archiveArtifacts artifacts: 'target/site/jacoco/**,target/site/pmd.html,frontend/cypress/screenshots/**,frontend/cypress/videos/**', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'AC1/target/site/jacoco/*,AC1/target/site/pmd.html,frontend/cypress/screenshots/,frontend/cypress/videos/*', allowEmptyArchive: true
         }
     }
 }
