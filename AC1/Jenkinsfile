@@ -192,8 +192,13 @@ pipeline {
     post {
         success { echo 'Pipeline concluido: testes, qualidade, deploy HOMOL e health check aprovados.' }
         failure { echo 'Pipeline interrompido. Consulte o stage e os logs para identificar ambiente, teste ou servico responsavel.' }
-        always {
-            archiveArtifacts artifacts: 'AC1/target/site/jacoco/*,AC1/target/site/pmd.html,frontend/cypress/screenshots/,frontend/cypress/videos/*', allowEmptyArchive: true
-        }
+       always {
+           junit testResults: 'AC1/target/surefire-reports/*.xml', allowEmptyResults: true
+           recordCoverage(
+               tools: [[parser: 'JACOCO', pattern: 'AC1/target/site/jacoco/jacoco.xml']],
+               sourceCodeRetention: 'LAST_BUILD'
+           )
+           archiveArtifacts artifacts: 'AC1/target/site/jacoco/*,AC1/target/site/pmd.html,frontend/cypress/screenshots/,frontend/cypress/videos/*', allowEmptyArchive: true
+       }
     }
 }
