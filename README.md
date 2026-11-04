@@ -349,24 +349,37 @@ flowchart TD
     S["Plataforma de Gamificação<br/>(Core)"]
 ```
 
+
 #### 4.2 Nível 2 — Container
 
-O Core continua sendo **uma única aplicação/container** (o `index.html` é servido pelo próprio Spring Boot, em `static/`). O diagrama representa a arquitetura-alvo; no código atual, o módulo implementado é `aluno`, enquanto Ranking, Curso, Conquista e Recompensa permanecem previstos.
+A arquitetura escolhida mantém o Core como uma única aplicação Spring Boot, organizada internamente em módulos. A decisão pelo Monólito Modular não cria novos processos ou containers de aplicação.
 
 ```mermaid
 flowchart TD
-    U(["Usuário"]) -- "HTTP" --> CORE
-    subgraph CORE["Core Gamificação — Java 17 / Spring Boot — MONÓLITO MODULAR"]
-        direction LR
-        R[ranking] --- C[curso] --- Q[conquista] --- P[recompensa]
+    U(["Usuário"]) -->|"HTTP / REST"| APP
+
+    subgraph CORE["Core — Plataforma de Gamificação"]
+        APP["Aplicação Spring Boot<br/>Java 17"]
     end
-    CORE -- "JPA" --> DB[("PostgreSQL 16<br/>(H2 em dev/testes)")]
-    CORE -- "/actuator/prometheus" --> PROM["Prometheus"]
-    PROM --> GRAF["Grafana"]
-    ADMDB["pgAdmin"] -.-> DB
+
+    APP -->|"JPA / SQL"| DB[("PostgreSQL 16")]
+
+    ADM["Administrador"] -->|"Administração"| DB
+
+    PROM["Prometheus<br/>(planejado)"]
+    GRAF["Grafana<br/>(planejado)"]
+
+    APP -.->|"Métricas"| PROM
+    PROM -.-> GRAF
 ```
 
-> Prometheus e Grafana fazem parte da 2ª parte (observabilidade) e ainda precisam ser adicionados ao `docker-compose.yml`.
+O Core permanece com um único artefato, uma única imagem Docker e um único deploy. A modularização ocorre dentro da aplicação, por meio da separação das capacidades de negócio.
+
+O módulo Aluno é a funcionalidade reorganizada nesta etapa. Os módulos Ranking, Curso, Conquista e Recompensa representam capacidades previstas para a evolução do sistema, não containers independentes.
+
+Prometheus e Grafana permanecem como componentes planejados para o desafio de CI/CD e Observabilidade.
+
+
 
 #### 4.3 Nível 3 — Componente (dentro do Core)
 
@@ -599,6 +612,27 @@ Além da movimentação das classes, foram realizadas as seguintes melhorias:
 
 A refatoração foi realizada incrementalmente, com execução dos testes após as movimentações para verificar a preservação do comportamento da aplicação.
 
+#### Comparação das dependências antes e depois
+
+**Antes da refatoração:**
+
+![Dependências antes](evidencias/Gabriel/dependencias-antes.png)
+
+**Depois da refatoração:**
+
+![Dependências depois](evidencias/Gabriel/dependencias-depois.png)
+
+| Dependência | Antes da refatoração | Depois da refatoração |
+|---|---|---|
+| AlunoResponse → AlunoEntity | Existia | Removida |
+| AlunoResponse → Aluno (domínio) | Existia | Removida |
+| AlunoService → Aluno (domínio) | Existia | Mantida |
+| AlunoService → AlunoRepository | Existia | Mantida, dentro do módulo |
+| AlunoController → AlunoService | Existia | Mantida |
+
+A principal redução de acoplamento ocorreu na camada de API. Anteriormente, `AlunoResponse` conhecia diretamente a entidade JPA e o domínio. Após a refatoração, a montagem das respostas passou a ser responsabilidade do `AlunoService`.
+
+A persistência permanece encapsulada estruturalmente no pacote `aluno.internal.persistence`. Como nesta etapa existe apenas um módulo implementado, ainda não foi demonstrada uma dependência entre módulos distintos.
 
 ### 6. Regras de dependência
 
