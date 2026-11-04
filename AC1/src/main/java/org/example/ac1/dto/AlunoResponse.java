@@ -1,6 +1,6 @@
 package org.example.ac1.dto;
 
-import domain.Aluno;
+import org.example.ac1.aluno.internal.domain.Aluno;
 import org.example.ac1.entity.AlunoEntity;
 
 public record AlunoResponse(

@@ -1,6 +1,6 @@
 package org.example.ac1.service;
 
-import domain.Aluno;
+import org.example.ac1.aluno.internal.domain.Aluno;
 import org.example.ac1.dto.AlunoRequest;
 import org.example.ac1.dto.AlunoResponse;
 import org.example.ac1.entity.AlunoEntity;
