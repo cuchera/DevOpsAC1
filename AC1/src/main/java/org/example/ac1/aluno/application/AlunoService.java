@@ -1,6 +1,6 @@
 package org.example.ac1.aluno.application;
 
-import org.example.ac1.aluno.internal.domain.Aluno;
+import org.example.ac1.aluno.domain.Aluno;
 import org.example.ac1.aluno.api.AlunoRequest;
 import org.example.ac1.aluno.api.AlunoResponse;
 import org.example.ac1.aluno.internal.entity.AlunoEntity;

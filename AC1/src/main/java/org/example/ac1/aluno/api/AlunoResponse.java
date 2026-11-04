@@ -1,6 +1,6 @@
 package org.example.ac1.aluno.api;
 
-import org.example.ac1.aluno.internal.domain.Aluno;
+import org.example.ac1.aluno.domain.Aluno;
 import org.example.ac1.aluno.internal.entity.AlunoEntity;
 
 public record AlunoResponse(

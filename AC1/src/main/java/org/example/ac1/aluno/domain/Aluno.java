@@ -1,4 +1,4 @@
-package org.example.ac1.aluno.internal.domain;
+package org.example.ac1.aluno.domain;
 
 public class Aluno {
 

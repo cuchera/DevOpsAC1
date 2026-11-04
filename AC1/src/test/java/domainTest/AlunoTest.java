@@ -1,6 +1,6 @@
 package domainTest;
 
-import org.example.ac1.aluno.internal.domain.Aluno;
+import org.example.ac1.aluno.domain.Aluno;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
