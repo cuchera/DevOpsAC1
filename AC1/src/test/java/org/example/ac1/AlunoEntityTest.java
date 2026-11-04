@@ -1,6 +1,6 @@
 package org.example.ac1;
 
-import org.example.ac1.aluno.internal.entity.AlunoEntity;
+import org.example.ac1.aluno.internal.persistence.AlunoEntity;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

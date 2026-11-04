@@ -1,4 +1,4 @@
-package org.example.ac1.aluno.internal.entity;
+package org.example.ac1.aluno.internal.persistence;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
