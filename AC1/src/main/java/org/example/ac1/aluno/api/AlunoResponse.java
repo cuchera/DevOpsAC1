@@ -1,8 +1,5 @@
 package org.example.ac1.aluno.api;
 
-import org.example.ac1.aluno.domain.Aluno;
-import org.example.ac1.aluno.internal.persistence.AlunoEntity;
-
 public record AlunoResponse(
         Long id,
         String nome,
@@ -11,22 +8,21 @@ public record AlunoResponse(
         int quantidadeCursosExtras,
         String mensagem
 ) {
-    public static AlunoResponse de(AlunoEntity aluno) {
-        Aluno dominio = new Aluno(
-                aluno.getNome(),
-                aluno.isCursoConcluido(),
-                aluno.getMediaFinal()
-        );
-
-        dominio.processarEncerramentoDoCurso();
-
+    public static AlunoResponse de(
+            Long id,
+            String nome,
+            boolean cursoConcluido,
+            double mediaFinal,
+            int quantidadeCursosExtras,
+            String mensagem
+    ) {
         return new AlunoResponse(
-                aluno.getId(),
-                aluno.getNome(),
-                aluno.isCursoConcluido(),
-                aluno.getMediaFinal(),
-                aluno.getQuantidadeCursosExtras(),
-                dominio.getMensagem()
+                id,
+                nome,
+                cursoConcluido,
+                mediaFinal,
+                quantidadeCursosExtras,
+                mensagem
         );
     }
 }

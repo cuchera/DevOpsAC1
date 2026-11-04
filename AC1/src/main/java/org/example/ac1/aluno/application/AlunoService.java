@@ -26,7 +26,7 @@ public class AlunoService {
     public List<AlunoResponse> listar() {
         return repository.findAll()
                 .stream()
-                .map(AlunoResponse::de)
+                .map(this::paraResponse)
                 .toList();
     }
 
@@ -42,7 +42,7 @@ public class AlunoService {
         AlunoEntity entidade = new AlunoEntity(request.nome().trim());
         aplicarResultado(entidade, request);
 
-        return AlunoResponse.de(repository.save(entidade));
+        return paraResponse(repository.save(entidade));
     }
 
     public AlunoResponse concluirOutroCurso(
@@ -53,7 +53,7 @@ public class AlunoService {
         AlunoEntity entidade = buscar(id);
         aplicarResultado(entidade, request);
 
-        return AlunoResponse.de(repository.save(entidade));
+        return paraResponse(repository.save(entidade));
     }
 
     public AlunoResponse resgatar(Long id) {
@@ -67,7 +67,7 @@ public class AlunoService {
 
         entidade.resgatarCursoExtra();
 
-        return AlunoResponse.de(repository.save(entidade));
+        return paraResponse(repository.save(entidade));
     }
 
     private AlunoEntity buscar(Long id) {
@@ -110,5 +110,24 @@ public class AlunoService {
                     HttpStatus.BAD_REQUEST,
                     "A média deve estar entre 0 e 10.");
         }
+    }
+
+    private AlunoResponse paraResponse(AlunoEntity entidade) {
+        Aluno dominio = new Aluno(
+                entidade.getNome(),
+                entidade.isCursoConcluido(),
+                entidade.getMediaFinal()
+        );
+
+        dominio.processarEncerramentoDoCurso();
+
+        return AlunoResponse.de(
+                entidade.getId(),
+                entidade.getNome(),
+                entidade.isCursoConcluido(),
+                entidade.getMediaFinal(),
+                entidade.getQuantidadeCursosExtras(),
+                dominio.getMensagem()
+        );
     }
 }
