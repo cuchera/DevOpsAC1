@@ -86,4 +86,26 @@ class CursoConcluidoEventosTest {
             assertEquals(antes, sender.tentativas());
         }
     }
+
+    @Nested
+    @SpringBootTest(properties = {
+            "spring.datasource.url=jdbc:h2:mem:d4-sync-ok;DB_CLOSE_DELAY=-1",
+            "spring.jpa.hibernate.ddl-auto=create-drop",
+            "app.notificacao.modo=sincrono"})
+    class SincronoComConsumidorDisponivel {
+        @Autowired AlunoService service;
+        @Autowired AlunoRepository repository;
+        @Autowired NotificacaoSender sender;
+
+        @Test
+        void notificacaoAconteceAntesDaRespostaNaMesmaThread() {
+            repository.deleteAll();
+            int antes = sender.tentativas();
+            service.cadastrar(new AlunoRequest("Caio", true, 9.0));
+            assertEquals(antes + 1, sender.tentativas(),
+                    "sincrono: ja notificou quando o metodo retorna, sem espera");
+            assertEquals(1, repository.count());
+        }
+    }
+
 }
