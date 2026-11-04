@@ -5,11 +5,13 @@ import org.example.ac1.aluno.api.AlunoRequest;
 import org.example.ac1.aluno.api.AlunoResponse;
 import org.example.ac1.aluno.internal.persistence.AlunoEntity;
 import org.example.ac1.aluno.internal.persistence.AlunoRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -17,9 +19,12 @@ import java.util.List;
 public class AlunoService {
 
     private final AlunoRepository repository;
+    private final ApplicationEventPublisher eventos;
 
-    public AlunoService(AlunoRepository repository) {
+    public AlunoService(AlunoRepository repository,
+                        ApplicationEventPublisher eventos) {
         this.repository = repository;
+        this.eventos = eventos;
     }
 
     @Transactional(readOnly = true)
@@ -42,7 +47,10 @@ public class AlunoService {
         AlunoEntity entidade = new AlunoEntity(request.nome().trim());
         aplicarResultado(entidade, request);
 
-        return paraResponse(repository.save(entidade));
+        AlunoEntity salvo = repository.save(entidade);
+        publicarConclusao(salvo);
+
+        return paraResponse(salvo);
     }
 
     public AlunoResponse concluirOutroCurso(
@@ -53,7 +61,21 @@ public class AlunoService {
         AlunoEntity entidade = buscar(id);
         aplicarResultado(entidade, request);
 
-        return paraResponse(repository.save(entidade));
+        AlunoEntity salvo = repository.save(entidade);
+        publicarConclusao(salvo);
+
+        return paraResponse(salvo);
+    }
+
+    private void publicarConclusao(AlunoEntity salvo) {
+        if (salvo.isCursoConcluido()) {
+            eventos.publishEvent(new CursoConcluidoEvent(
+                    salvo.getId(),
+                    salvo.getNome(),
+                    salvo.getMediaFinal(),
+                    salvo.getQuantidadeCursosExtras(),
+                    Instant.now()));
+        }
     }
 
     public AlunoResponse resgatar(Long id) {
