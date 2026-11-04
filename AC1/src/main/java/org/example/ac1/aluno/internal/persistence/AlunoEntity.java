@@ -52,6 +52,21 @@ public class AlunoEntity {
         quantidadeCursosExtras--;
     }
 
+    public void atualizarDados(
+            boolean cursoConcluido,
+            double mediaFinal,
+            int quantidadeCursosExtras) {
+
+        if (quantidadeCursosExtras < 0) {
+            throw new IllegalArgumentException(
+                    "A quantidade de créditos não pode ser negativa.");
+        }
+
+        this.cursoConcluido = cursoConcluido;
+        this.mediaFinal = mediaFinal;
+        this.quantidadeCursosExtras = quantidadeCursosExtras;
+    }
+
     public Long getId() {
         return id;
     }
