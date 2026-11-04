@@ -51,4 +51,14 @@ class AlunoEntityTest {
 
         assertEquals(0, aluno.getQuantidadeCursosExtras());
     }
+
+    @Test
+    void naoDeveAtualizarComQuantidadeNegativa() {
+        AlunoEntity aluno = new AlunoEntity("Gabriel");
+
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> aluno.atualizarDados(true, 8.0, -1)
+        );
+    }
 }
