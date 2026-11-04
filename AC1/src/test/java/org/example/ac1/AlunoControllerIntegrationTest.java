@@ -1,6 +1,6 @@
 package org.example.ac1;
 
-import org.example.ac1.repository.AlunoRepository;
+import org.example.ac1.aluno.internal.repository.AlunoRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
