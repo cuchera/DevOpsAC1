@@ -1,7 +1,7 @@
 package org.example.ac1.dto;
 
 import org.example.ac1.aluno.internal.domain.Aluno;
-import org.example.ac1.entity.AlunoEntity;
+import org.example.ac1.aluno.internal.entity.AlunoEntity;
 
 public record AlunoResponse(
         Long id,

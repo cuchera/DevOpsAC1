@@ -3,7 +3,7 @@ package org.example.ac1.service;
 import org.example.ac1.aluno.internal.domain.Aluno;
 import org.example.ac1.dto.AlunoRequest;
 import org.example.ac1.dto.AlunoResponse;
-import org.example.ac1.entity.AlunoEntity;
+import org.example.ac1.aluno.internal.entity.AlunoEntity;
 import org.example.ac1.repository.AlunoRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

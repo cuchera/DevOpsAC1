@@ -1,6 +1,6 @@
 package org.example.ac1.repository;
 
-import org.example.ac1.entity.AlunoEntity;
+import org.example.ac1.aluno.internal.entity.AlunoEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AlunoRepository
