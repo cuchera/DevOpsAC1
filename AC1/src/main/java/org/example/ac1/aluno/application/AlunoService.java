@@ -1,4 +1,4 @@
-package org.example.ac1.aluno.internal.service;
+package org.example.ac1.aluno.application;
 
 import org.example.ac1.aluno.internal.domain.Aluno;
 import org.example.ac1.aluno.api.AlunoRequest;

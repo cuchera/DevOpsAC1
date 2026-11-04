@@ -3,7 +3,7 @@ package org.example.ac1;
 import org.example.ac1.aluno.api.AlunoRequest;
 import org.example.ac1.aluno.api.AlunoResponse;
 import org.example.ac1.aluno.internal.repository.AlunoRepository;
-import org.example.ac1.aluno.internal.service.AlunoService;
+import org.example.ac1.aluno.application.AlunoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
