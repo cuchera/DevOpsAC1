@@ -1,4 +1,4 @@
-package org.example.ac1.dto;
+package org.example.ac1.aluno.api;
 
 import org.example.ac1.aluno.internal.domain.Aluno;
 import org.example.ac1.aluno.internal.entity.AlunoEntity;

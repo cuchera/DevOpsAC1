@@ -1,7 +1,7 @@
 package org.example.ac1.aluno.api;
 
-import org.example.ac1.dto.AlunoRequest;
-import org.example.ac1.dto.AlunoResponse;
+import org.example.ac1.aluno.api.AlunoRequest;
+import org.example.ac1.aluno.api.AlunoResponse;
 import org.example.ac1.aluno.internal.service.AlunoService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;

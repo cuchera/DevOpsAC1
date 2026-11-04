@@ -1,4 +1,4 @@
-package org.example.ac1.dto;
+package org.example.ac1.aluno.api;
 
 public record AlunoRequest(
         String nome,

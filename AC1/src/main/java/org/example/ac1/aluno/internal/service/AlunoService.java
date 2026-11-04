@@ -1,8 +1,8 @@
 package org.example.ac1.aluno.internal.service;
 
 import org.example.ac1.aluno.internal.domain.Aluno;
-import org.example.ac1.dto.AlunoRequest;
-import org.example.ac1.dto.AlunoResponse;
+import org.example.ac1.aluno.api.AlunoRequest;
+import org.example.ac1.aluno.api.AlunoResponse;
 import org.example.ac1.aluno.internal.entity.AlunoEntity;
 import org.example.ac1.aluno.internal.repository.AlunoRepository;
 import org.springframework.http.HttpStatus;
