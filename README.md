@@ -10,10 +10,10 @@
 
 ### BDD 1 — Gabriel
 
-**Cenário:** aluno com média igual ou superior a 7,0 recebe cursos extras.
+**Cenário:** aluno com média superior a 7,0 recebe cursos extras.
 
 * **Dado** um aluno que concluiu um curso;
-* **E** sua média final foi igual ou superior a 7,0;
+* **E** sua média final foi superior a 7,0;
 * **Quando** o sistema processa o encerramento do curso;
 * **Então** ele deve ter direito a escolher mais três cursos.
 
@@ -47,7 +47,7 @@ Após o GREEN, a classe `Aluno` foi revisada (ajustes de formatação e nomencla
 
 ### Regra implementada
 
-* Aluno com curso concluído e média igual ou superior a 7,0 recebe três cursos extras.
+* Aluno com curso concluído e média superior a 7,0 recebe três cursos extras.
 * Aluno com média inferior a 7,0 não recebe cursos extras (branch complementado pelo BDD 2 — Leonardo).
 
 
@@ -285,7 +285,7 @@ O repositório implementa a capacidade de **cursos extras por desempenho** (regr
 | Média **< 7,0** → sem direito | `domain.Aluno` |
 | Resgate de curso extra consome o saldo | `AlunoEntity#resgatarCursoExtra` / `AlunoService#resgatar` |
 
-Ranking, Cursos e Conquistas **ainda não possuem código** neste repositório. Eles aparecem na estrutura-alvo como módulos previstos (esqueleto), para que a fronteira exista antes de a funcionalidade chegar.
+Ranking, Cursos, Conquistas e Recompensas **ainda não possuem módulos independentes implementados** neste repositório. Eles aparecem na estrutura-alvo como módulos previstos (esqueleto), para que a fronteira exista antes de a funcionalidade chegar.
 
 ---
 
@@ -308,7 +308,7 @@ Regra de leitura: **RF/RNF → ASR + RPC → alternativas → ADR → C4 → evi
 | RPC | O que ganhamos | O que aceitamos |
 |---|---|---|
 | Spring Boot (legado AC1) | Reuso total, sem reescrita | Fronteiras dependem de disciplina/ArchUnit, não do compilador |
-| Equipe de 6 devs | Operação simples | Sem escala/deploy independente por módulo |
+| Equipe de 4 devs | Operação simples | Sem escala/deploy independente por módulo |
 | Banco relacional único | Transações simples, sem nova tecnologia | Banco compartilhado entre módulos |
 | Evolução incremental | Risco baixo, passos reversíveis | Convivência temporária entre estruturas |
 
@@ -329,7 +329,7 @@ Seria prematuro: rede, contratos, observabilidade e tolerância a falhas distrib
 | **Status** | Aceito |
 | **Contexto** | Crescimento até 100 mil usuários; Ranking cresce diferente; demais capacidades seguem evoluindo. |
 | **ASRs** | Manutenibilidade; Escalabilidade; Complexidade operacional. |
-| **RPCs** | Spring Boot; 6 desenvolvedores; banco relacional; legado AC1. |
+| **RPCs** | Spring Boot; 4 desenvolvedores; banco relacional; legado AC1. |
 | **Alternativas** | A) Monólito em Camadas; B) Monólito Modular; C) Decomposição seletiva em serviços. |
 | **Decisão** | Adotar Monólito Modular e preservar uma fronteira clara para o Ranking (candidato a extração futura). |
 | **Consequências positivas** | Separação de responsabilidades; menor acoplamento; evolução incremental; custo operacional bem menor que microsserviços. |
@@ -351,7 +351,7 @@ flowchart TD
 
 #### 4.2 Nível 2 — Container
 
-O Core continua sendo **um único container** (o `index.html` é servido pelo próprio Spring Boot, em `static/`). O que muda é a organização interna.
+O Core continua sendo **uma única aplicação/container** (o `index.html` é servido pelo próprio Spring Boot, em `static/`). O diagrama representa a arquitetura-alvo; no código atual, o módulo implementado é `aluno`, enquanto Ranking, Curso, Conquista e Recompensa permanecem previstos.
 
 ```mermaid
 flowchart TD
@@ -371,31 +371,55 @@ flowchart TD
 #### 4.3 Nível 3 — Componente (dentro do Core)
 
 ```mermaid
+
 flowchart LR
-    subgraph recompensa
-        direction TB
-        RC["AlunoController<br/>(api)"] --> RS["AlunoService<br/>(internal)"]
-        RS --> RD["Aluno<br/>(regra de domínio)"]
-        RS --> RR["AlunoRepository"]
-        RR --> RE["AlunoEntity"]
-    end
-    subgraph ranking
-        direction TB
-        KC["RankingController<br/>(api)"] --> KS["RankingService<br/>(internal)"]
-        KS --> KR["RankingRepository"]
-    end
-    KS -. "contrato em recompensa.api" .-> RC
+   subgraph ALUNO["Módulo Aluno"]
+      direction TB
+
+      subgraph API["api"]
+         C["AlunoController"]
+         DTO["AlunoRequest / AlunoResponse"]
+      end
+
+      subgraph APP["application"]
+         S["AlunoService"]
+      end
+
+      subgraph DOM["domain"]
+         D["Aluno"]
+      end
+
+      subgraph INT["internal / persistence"]
+         R["AlunoRepository"]
+         E["AlunoEntity"]
+      end
+
+      C --> S
+      S --> D
+      S --> R
+      R --> E
+      S --> DTO
+   end
+
+   HTTP["Requisições HTTP"] --> C
+   E --> DB[("Banco de dados")]
 ```
 
-A seta tracejada é a **única** forma permitida de o Ranking obter dados de Recompensas: por contrato na `api`, nunca por `internal`.
+Quando outros módulos forem implementados, deverão acessar as funcionalidades de Aluno por contratos disponibilizados em `aluno.api`, nunca por `aluno.internal`.
 
 #### 4.4 Nível 4 — Código
-Exemplo do módulo `recompensa`, com trechos reais da AC1 já no estado-alvo (`api` chama `internal`).
+Exemplo do módulo `aluno`, com a estrutura resultante da refatoração da AC1.
 
-**`recompensa/api/AlunoController.java`** — porta de entrada HTTP:
+**`aluno/api/AlunoController.java` — porta de entrada HTTP:**
 
 ```java
-package org.example.ac1.recompensa.api;
+package org.example.ac1.aluno.api;
+
+import org.example.ac1.aluno.application.AlunoService;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/alunos")
@@ -407,18 +431,28 @@ public class AlunoController {
         this.service = service;
     }
 
-    @PostMapping("/processar-encerramento")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AlunoResponse cadastrar(@RequestBody AlunoRequest request) {
-        return service.cadastrar(request);
-    }
+    // Os endpoints HTTP delegam as operações ao serviço.
 }
 ```
 
-**`recompensa/internal/Aluno.java`** — regra de negócio (média acima de 7,0 dá 3 cursos extras):
+**`aluno/application/AlunoService.java` — coordenação dos casos de uso:**
 
 ```java
-package org.example.ac1.recompensa.internal;
+package org.example.ac1.aluno.application;
+
+import org.example.ac1.aluno.api.AlunoRequest;
+import org.example.ac1.aluno.api.AlunoResponse;
+import org.example.ac1.aluno.domain.Aluno;
+import org.example.ac1.aluno.internal.persistence.AlunoEntity;
+import org.example.ac1.aluno.internal.persistence.AlunoRepository;
+```
+
+O serviço coordena as operações da funcionalidade, utiliza as regras do domínio e acessa a persistência para consultar e armazenar os dados. Também é responsável por montar as respostas da API, evitando que os DTOs dependam diretamente das entidades de persistência.
+
+**`aluno/domain/Aluno.java` — regras de negócio:**
+
+```java
+package org.example.ac1.aluno.domain;
 
 public class Aluno {
 
@@ -426,18 +460,32 @@ public class Aluno {
     private static final int QUANTIDADE_DE_CURSOS_EXTRAS = 3;
 
     public void processarEncerramentoDoCurso() {
-        if (cursoConcluido && mediaFinal > MEDIA_MINIMA_PARA_CURSOS_EXTRAS) {
-            this.quantidadeCursosExtras = QUANTIDADE_DE_CURSOS_EXTRAS;
-        } else {
-            this.quantidadeCursosExtras = 0;
-        }
+        // Processamento da regra de negócio.
     }
 }
 ```
 
-O controller só enxerga o serviço do próprio módulo. Os demais módulos não importam nada de `recompensa.internal`.
+A classe `Aluno` concentra as regras relacionadas ao encerramento do curso e à concessão de cursos extras, mantendo a lógica de negócio independente da infraestrutura.
 
----
+**`aluno/internal/persistence/AlunoRepository.java` — acesso aos dados:**
+
+```java
+package org.example.ac1.aluno.internal.persistence;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface AlunoRepository
+        extends JpaRepository<AlunoEntity, Long> {
+}
+```
+
+**`aluno/internal/persistence/AlunoEntity.java` — entidade de persistência:**
+
+A classe `AlunoEntity` representa a estrutura persistida no banco de dados, utilizando JPA para mapear os dados do aluno.
+
+A organização permite separar as responsabilidades de cada parte do módulo. O Controller recebe as requisições HTTP, o Service coordena os casos de uso, o Domain concentra as regras de negócio e a camada de persistência gerencia o acesso aos dados.
+
+Os demais módulos, quando implementados, deverão acessar a funcionalidade Aluno por meio de contratos disponibilizados em `aluno.api`, sem depender diretamente de `aluno.internal`.
 
 ### 4.5 Pipeline atual da AC1 (Jenkinsfile)
 
@@ -454,7 +502,7 @@ O controller só enxerga o serviço do próprio módulo. Os demais módulos não
 | 9 E2E | Cypress (opcional) |
 | 10 Observabilidade | Hoje só imprime URLs; será substituída por Prometheus/Grafana |
 
-A modularização **não altera nenhuma etapa**: continua um artefato, uma imagem e um deploy.
+A modularização não exige a divisão do pipeline: continuam previstos um artefato, uma imagem e um deploy. O Jenkinsfile existente ainda precisa ser revisado para validar suas referências e etapas.
 
 ### 4.6 Modular × Camadas
 
@@ -462,7 +510,7 @@ A modularização **não altera nenhuma etapa**: continua um artefato, uma image
 |---|---|---|
 | Organização | Por tipo técnico | Por capacidade de negócio |
 | Onde mudar uma regra | Vários pacotes | Um módulo |
-| Fronteiras | Convenção | Explícitas (`api` / `internal`) |
+| Fronteiras | Não definidas por capacidade | Organizadas por convenção (`api` / `internal`), ainda sem imposição automática |
 | Acoplamento entre capacidades | Livre, cresce com o tempo | Só via contrato |
 | Testes | Espalhados | Por módulo |
 | Extrair o Ranking depois | Muita reorganização | Fronteira já existe |
@@ -473,7 +521,7 @@ A modularização **não altera nenhuma etapa**: continua um artefato, uma image
 
 ### 5. Antes × Depois
 
-#### 5.1 Antes — organizado por camada técnica (estado atual do repositório)
+#### 5.1 Antes — organizado por camada técnica (estado anterior à refatoração)
 
 ```text
 AC1/src/main/java/
@@ -493,46 +541,64 @@ Pontos de atenção identificados no código atual:
 
 1. **Organização por camada:** para entender "recompensa por desempenho" é preciso navegar por 5 pacotes.
 2. **Tudo é `public`:** nada impede que outro futuro módulo (ex.: Ranking) use `AlunoRepository` ou `AlunoEntity` diretamente.
-3. **`AlunoResponse.de(AlunoEntity)`:** o DTO (camada de API) depende da entidade JPA e do domínio, e ainda **executa regra de negócio** (`processarEncerramentoDoCurso`) ao montar a resposta. A API conhece o interior.
+3. **`AlunoResponse.de(AlunoEntity)`:** no estado anterior à refatoração, o DTO (camada de API) dependia da entidade JPA e do domínio, e ainda **executava regra de negócio** (`processarEncerramentoDoCurso`) ao montar a resposta. A API conhecia o interior.
 4. **`domain.Aluno` fora de `org.example.ac1`:** o domínio fica solto, sem pertencer a nenhuma capacidade.
 
-#### 5.2 Depois — organizado por capacidade de negócio (estado-alvo)
+#### 5.2 Depois — organizado por capacidade de negócio (estado implementado)
 
 ```text
 AC1/src/main/java/org/example/ac1/
 ├── Ac1Application.java
 │
-├── recompensa/                         ← capacidade que hoje contém a regra da AC1
-│   ├── api/                            ← ÚNICA superfície pública do módulo
-│   │   ├── AlunoController.java
-│   │   ├── AlunoRequest.java
-│   │   └── AlunoResponse.java
-│   └── internal/                       ← invisível para os demais módulos
-│       ├── AlunoService.java
-│       ├── AlunoRepository.java
-│       ├── AlunoEntity.java
-│       └── Aluno.java                  ← antigo domain.Aluno
-│
-├── ranking/      { api/  internal/ }   ← esqueleto (candidato a extração futura)
-├── curso/        { api/  internal/ }   ← esqueleto
-└── conquista/    { api/  internal/ }   ← esqueleto
+└── aluno/                              ← módulo implementado na AC1
+    ├── api/                            ← interface pública do módulo
+    │   ├── AlunoController.java
+    │   ├── AlunoRequest.java
+    │   └── AlunoResponse.java
+    │
+    ├── application/                    ← coordenação dos casos de uso
+    │   └── AlunoService.java
+    │
+    ├── domain/                         ← regras de negócio
+    │   └── Aluno.java
+    │
+    └── internal/                       ← implementação interna
+        └── persistence/
+            ├── AlunoEntity.java
+            └── AlunoRepository.java
 ```
+
+O módulo `aluno` concentra a funcionalidade de concessão e resgate de cursos extras por desempenho acadêmico.
+
+As pastas `ranking`, `curso` e `conquista` representam capacidades previstas para a evolução da arquitetura, mas ainda não possuem implementação neste repositório.
+
+
 
 #### 5.3 Mapa de movimentação
 
-| Classe | De | Para |
+A refatoração reorganizou as classes da funcionalidade de Aluno, substituindo a estrutura baseada em camadas técnicas por uma estrutura organizada por capacidade de negócio.
+
+| Classe | Pacote anterior | Pacote atual |
 |---|---|---|
-| `AlunoController` | `ac1.controller` | `ac1.recompensa.api` |
-| `AlunoRequest` | `ac1.dto` | `ac1.recompensa.api` |
-| `AlunoResponse` | `ac1.dto` | `ac1.recompensa.api` |
-| `AlunoService` | `ac1.service` | `ac1.recompensa.internal` |
-| `AlunoRepository` | `ac1.repository` | `ac1.recompensa.internal` |
-| `AlunoEntity` | `ac1.entity` | `ac1.recompensa.internal` |
-| `Aluno` | `domain` | `ac1.recompensa.internal` |
+| `AlunoController` | `org.example.ac1.controller` | `org.example.ac1.aluno.api` |
+| `AlunoRequest` | `org.example.ac1.dto` | `org.example.ac1.aluno.api` |
+| `AlunoResponse` | `org.example.ac1.dto` | `org.example.ac1.aluno.api` |
+| `AlunoService` | `org.example.ac1.service` | `org.example.ac1.aluno.application` |
+| `Aluno` | `domain` | `org.example.ac1.aluno.domain` |
+| `AlunoEntity` | `org.example.ac1.entity` | `org.example.ac1.aluno.internal.persistence` |
+| `AlunoRepository` | `org.example.ac1.repository` | `org.example.ac1.aluno.internal.persistence` |
 
-> **Nome do módulo:** `recompensa` é uma sugestão por ser a capacidade que a AC1 implementa. Se a equipe preferir `conquista` ou `aluno`, a lógica da refatoração é a mesma.
+Além da movimentação das classes, foram realizadas as seguintes melhorias:
 
----
+- Atualização dos imports e declarações de pacotes.
+- Remoção das pastas antigas que ficaram vazias.
+- Separação das responsabilidades entre API, aplicação, domínio e persistência.
+- Remoção da dependência direta entre `AlunoResponse` e `AlunoEntity`.
+- Transferência da montagem das respostas para `AlunoService`.
+- Manutenção dos endpoints e das regras de negócio existentes.
+
+A refatoração foi realizada incrementalmente, com execução dos testes após as movimentações para verificar a preservação do comportamento da aplicação.
+
 
 ### 6. Regras de dependência
 
@@ -551,121 +617,140 @@ AC1/src/main/java/org/example/ac1/
 
 1. **`internal` é privado ao módulo.** Nenhuma classe de outro módulo pode importar `*.internal.*`.
 2. **Módulos conversam só via `api`** (DTOs, interfaces/serviços de fachada expostos pelo módulo).
-3. **`internal` nunca depende de `api` de outro módulo por atalho**: se Ranking precisar de dados de Recompensas, isso passa por um contrato explícito em `recompensa.api`.
+3. **`internal` nunca depende de `api` de outro módulo por atalho**: quando outros módulos precisarem acessar funcionalidades de Aluno, deverão utilizar contratos explícitos em `aluno.api`.
 4. **Sem ciclos** entre módulos.
 5. **Um banco, um deploy:** a modularização não separa schema nem processo (ver trade-offs do ADR).
 
 ---
 
-### 7. Como fazer a refatoração (passo a passo incremental)
+### 7. Processo de refatoração — evolução incremental
 
-Cada passo termina com `./mvnw clean test` **verde**. Se quebrar, o passo anterior é o ponto de retorno.
+A migração da arquitetura em camadas para o Monólito Modular foi realizada de forma incremental, utilizando o recurso **Refactor → Move** da IDE para reorganizar os pacotes e atualizar as referências entre as classes.
 
-1. **Rodar a suíte antes de tocar em nada** e guardar o resultado e o relatório JaCoCo como linha de base.
-2. **Criar o pacote `recompensa/{api,internal}`** e mover as classes conforme o mapa da seção 5.3 (use *Refactor → Move* da IDE para atualizar imports automaticamente).
-3. **Trazer `domain.Aluno` para dentro do módulo** (`recompensa.internal`). Ajustar `AlunoTest` (hoje em `domainTest`) para o novo pacote.
-4. **Remover o acoplamento da API com o interior:**
-   - Hoje: `AlunoResponse.de(AlunoEntity)` monta a resposta e executa `processarEncerramentoDoCurso()`.
-   - Alvo: a **montagem da resposta passa para `internal`** (ex.: método no `AlunoService`), e `AlunoResponse` vira um `record` simples, sem conhecer entidade nem domínio.
-5. **Reduzir a visibilidade em `internal`:** `AlunoService`, `AlunoRepository`, `AlunoEntity` e `Aluno` passam a *package-private* onde o Spring permitir. Só o que o `api` precisa continua acessível.
-6. **Criar os esqueletos** `ranking/`, `curso/` e `conquista/` com `api/` e `internal/` (por exemplo, um `package-info.java` descrevendo a responsabilidade). Assim a fronteira existe antes do código.
-7. **Proteger a regra com teste de arquitetura** (recomendado): um teste [ArchUnit](https://www.archunit.org/) que falha se alguma classe fora do módulo acessar `..internal..`. Sem isso, a fronteira depende apenas de disciplina.
-8. **Atualizar este README, o ADR e o C4**, e versionar a evidência antes/depois.
+Cada etapa foi acompanhada pela execução dos testes automatizados, garantindo que as alterações estruturais não modificassem o comportamento funcional da aplicação.
 
-> **Mudança nos testes:** `AlunoControllerIntegrationTest` e `AlunoServiceIntegrationTest` usam `AlunoRepository`/`AlunoService` diretamente. Ao tornar `internal` privado, esses testes devem ficar **no mesmo pacote do módulo** (`recompensa.internal`) ou passar a exercitar o módulo apenas pela `api`/HTTP.
+#### 7.1 Etapas realizadas
 
----
+1. **Criação do módulo Aluno:** criação do pacote `aluno`, que passou a concentrar as classes relacionadas à funcionalidade implementada na AC1.
+
+2. **Organização da API:** movimentação de `AlunoController`, `AlunoRequest` e `AlunoResponse` para `aluno.api`.
+
+3. **Organização da aplicação:** movimentação de `AlunoService` para `aluno.application`, mantendo a responsabilidade de coordenar os casos de uso.
+
+4. **Organização do domínio:** movimentação da classe `Aluno` para `aluno.domain`, mantendo as regras de negócio separadas da infraestrutura.
+
+5. **Organização da persistência:** movimentação de `AlunoEntity` e `AlunoRepository` para `aluno.internal.persistence`.
+
+6. **Redução do acoplamento:** remoção da dependência direta entre `AlunoResponse` e `AlunoEntity`. A montagem da resposta passou a ser responsabilidade do `AlunoService`, mantendo o DTO independente da entidade JPA.
+
+7. **Validação:** execução dos testes automatizados após as alterações, verificando a preservação do comportamento da aplicação.
+
+#### 7.2 Resultado da refatoração
+
+A estrutura anterior, organizada por camadas técnicas, foi substituída por uma organização baseada na funcionalidade de negócio.
+
+O módulo Aluno passou a possuir separação entre API, aplicação, domínio e persistência interna.
+
+A implementação mantém:
+- Um único projeto Spring Boot;
+- Um único processo de execução;
+- Um banco de dados compartilhado;
+- Os mesmos endpoints HTTP;
+- As regras de negócio existentes.
+
+#### 7.3 Melhorias arquiteturais futuras
+
+Algumas melhorias podem ser implementadas em etapas posteriores:
+
+- Restringir a visibilidade das classes internas, utilizando modificadores de acesso adequados.
+- Adicionar testes de arquitetura com ArchUnit para impedir dependências externas em `internal`.
+- Criar os módulos de Ranking, Curso e Conquista quando suas funcionalidades forem implementadas.
+- Definir contratos explícitos na API para comunicação entre módulos.
+
+Essas melhorias não são consideradas concluídas nesta etapa da refatoração.
+
 
 ### 8. Evidência: o comportamento foi preservado?
 
-A evidência **não é** "a aplicação continua subindo". O que comparar:
+A validação da refatoração foi realizada por meio da execução da suíte de testes automatizados, garantindo que a reorganização dos pacotes e a separação das responsabilidades não alterassem o comportamento funcional da aplicação.
 
-| Evidência | Antes | Depois (esperado) |
+#### 8.1 Resultado dos testes
+
+Após as alterações arquiteturais, foi executado o comando:
+
+```powershell
+.\mvnw.cmd test
+```
+
+O resultado apresentado pelo Maven foi:
+
+| Indicador | Resultado |
+|---|---:|
+| Testes executados | 28 |
+| Falhas | 0 |
+| Erros | 0 |
+| Testes ignorados | 0 |
+| Resultado da compilação | BUILD SUCCESS |
+
+Os resultados demonstram que todos os 28 testes foram executados com sucesso após a refatoração.
+
+#### 8.2 Comparação arquitetural
+
+| Critério | Antes | Depois |
 |---|---|---|
-| **Organização** | Por camada técnica | Por capacidade de negócio |
-| **Dependências** | Qualquer classe acessa qualquer outra | Dependências entre módulos explícitas e só via `api` |
-| **Testes** | Mudança espalhada em vários pacotes | Testes concentrados por módulo |
-| **Evolução futura** | Extrair uma capacidade exige reorganizar muito | Ranking com fronteira pronta para extração, se necessário |
-| **Comportamento** | Suíte da AC1 verde, cobertura JaCoCo 100% na regra de domínio | **Mesma suíte verde, mesmos resultados** |
+| Organização | Por camadas técnicas | Por capacidade de negócio |
+| Domínio | Pacote separado da aplicação | Dentro do módulo Aluno |
+| API | Controller e DTOs distribuídos | Agrupados em `aluno.api` |
+| Aplicação | Serviço em pacote global | `aluno.application` |
+| Persistência | Entity e Repository em pacotes separados | Agrupados em `aluno.internal.persistence` |
+| Dependência do DTO | AlunoResponse conhecia AlunoEntity | AlunoResponse independente da entidade JPA |
+| Implantação | Um único Spring Boot | Um único Spring Boot |
 
-#### Comandos de verificação
+#### 8.3 Preservação do comportamento
 
-```bash
-cd AC1
+A refatoração foi realizada sem alterar intencionalmente os endpoints HTTP ou as regras de negócio existentes.
 
-# Suíte completa (JUnit + JaCoCo) — rodar ANTES e DEPOIS da refatoração
-./mvnw -B clean test
+Os testes de integração e de domínio foram utilizados para verificar o funcionamento das operações relacionadas ao cadastro de alunos, encerramento de cursos, concessão e resgate de cursos extras.
 
-# Relatório de cobertura
-# AC1/target/site/jacoco/index.html
+A aprovação dos 28 testes indica que a reorganização arquitetural preservou os comportamentos cobertos pela suíte de testes.
 
-# Subir a aplicação para validar os endpoints (perfil H2 por padrão)
-./mvnw spring-boot:run
-# Swagger: http://localhost:8080/swagger-ui.html
-```
+#### 8.4 Evidências
 
-Para execução com PostgreSQL via Docker, na raiz do repositório:
+Exemplo:
 
-```bash
-docker compose up -d --build
-# API: http://localhost:8081  ·  Health: http://localhost:8081/actuator/health
-```
 
-#### Contrato HTTP que **não pode mudar**
+![testes-monolito-modular.png](evidencias/Gabriel/testes-monolito-modular.png)
 
-| Método | Rota |
-|---|---|
-| `GET` | `/api/alunos` |
-| `POST` | `/api/alunos/processar-encerramento` |
-| `POST` | `/api/alunos/{id}/concluir-outro-curso` |
-| `POST` | `/api/alunos/{id}/resgatar-curso-extra` |
-
-Os testes de integração (`AlunoControllerIntegrationTest`, `AlunoServiceIntegrationTest`) e os testes de domínio (`AlunoTest`, `AlunoEntityTest`) cobrem esse comportamento e servem como rede de segurança da refatoração.
 
 ---
 
 ### 9. Impacto no pipeline (Jenkins)
 
-Nenhuma etapa do `Jenkinsfile` precisa mudar: continua um único artefato (`mvn package`), uma única imagem Docker e um único deploy. Esse é exatamente o ganho de operação frente a microsserviços.
+A adoção do Monólito Modular não exige, por si só, a divisão do pipeline em múltiplos processos de build ou deploy. A aplicação continua sendo um único projeto Spring Boot, gerando um único artefato e utilizando uma única imagem Docker.
+
+Dessa forma, a reorganização interna dos pacotes não altera o modelo de implantação da aplicação.
+
+Entretanto, o Jenkinsfile existente ainda precisa de revisão para garantir que todas as etapas e referências de testes correspondam à estrutura atual do projeto.
 
 ---
+
 
 ### 10. Conclusão
 
-**O que se pretende comprovar:** o Core pode ser reorganizado por capacidade de negócio **sem comunicação distribuída** e **sem alterar o comportamento funcional**, reduzindo o acoplamento estrutural e mantendo a operação compatível com uma equipe de 6 pessoas.
+A refatoração demonstrou que é possível reorganizar a funcionalidade de Aluno de uma arquitetura organizada por camadas técnicas para uma estrutura de Monólito Modular, sem introduzir comunicação distribuída ou alterar intencionalmente o comportamento funcional existente.
 
-**O que NÃO foi decidido:** extrair o Ranking para um serviço independente. O cenário informa crescimento, mas não traz evidência de gargalo nem necessidade comprovada de deploy independente.
+A implementação passou a separar as responsabilidades em quatro áreas:
+- `api`: controladores e objetos de comunicação;
+- `application`: coordenação dos casos de uso;
+- `domain`: regras de negócio;
+- `internal/persistence`: acesso e representação dos dados persistidos.
 
-**O que ainda precisa ser medido antes de extrair um serviço:**
+A execução dos testes automatizados apresentou 28 testes executados, sem falhas ou erros, indicando a preservação dos comportamentos cobertos pela suíte.
 
-- latência (p95/p99) das operações de Ranking sob carga;
-- throughput e uso de CPU/memória por capacidade;
-- frequência de deploy do Ranking comparada às demais capacidades;
-- contenção no banco compartilhado.
+**O que ainda não foi implementado:** os módulos independentes de Ranking, Curso, Conquista e Recompensa. Eles permanecem como possibilidades de evolução da arquitetura.
 
-Quando essas métricas justificarem o custo da distribuição, o **ADR-001 deve ser revisitado** e o módulo `ranking` será o primeiro candidato, justamente por já ter fronteira definida.
+**O que ainda precisa ser medido:** latência, throughput, consumo de recursos, frequência de deploy e contenção no banco de dados antes de considerar a extração de alguma capacidade para um microsserviço.
 
----
-
-### 11. Checklist de entrega (evidências no Git)
-
-- [ ] README arquitetural com RF → RNF → ASR → RPC → alternativas → decisão (este documento)
-- [ ] ADR-001 com decisão e trade-offs
-- [ ] C4 Container atualizado
-- [ ] Código da modularização (módulo `recompensa`)
-- [ ] Evidência antes/depois da estrutura e das dependências
-- [ ] Testes executados após a refatoração (`./mvnw clean test` verde + JaCoCo)
-- [ ] Conclusão: o que foi comprovado e o que ainda precisa ser medido
+O Monólito Modular foi escolhido como uma evolução intermediária, permitindo melhorar a organização interna sem assumir antecipadamente a complexidade operacional de uma arquitetura distribuída.
 
 ---
-
-### 12. Próximos passos — Implementação
-
-Fluxo pedido: **AC1 → Ranking → Jenkinsfile → 100% de cobertura → Observabilidade (Grafana + Prometheus).**
-
-| # | Item | Situação no repositório | O que falta |
-|---|---|---|---|
-| 1 | Ranking | Não existe código | Criar o módulo `ranking/{api,internal}` com a regra de ordenação dos alunos |
-| 2 | Jenkinsfile | Existe, 10 etapas | Ajustar às mudanças (testes do Ranking, etapa de observabilidade real). Há referências a `ParticipanteRepositoryTest`/Testcontainers que não existem no repo |
-| 3 | 100% de cobertura | JaCoCo configurado; 100% só na regra de domínio (`Aluno`) | Cobrir o Ranking e, se exigido, impor mínimo no build com a regra `check` do JaCoCo |
-| 4 | Observabilidade | Actuator presente (`/actuator/health`) | Adicionar `micrometer-registry-prometheus`, expor `/actuator/prometheus`, incluir serviços `prometheus` e `grafana` no `docker-compose.yml` e um dashboard |
