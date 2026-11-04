@@ -24,4 +24,14 @@ class ConquistaTest {
 
         assertFalse(conquista.isDesbloqueada());
     }
+
+    @Test
+    void devePermanecerDesbloqueadaAposAtingirAMeta() {
+        Conquista conquista = new Conquista("Aluno dedicado", 5);
+
+        conquista.verificarDesbloqueio(5);
+        conquista.verificarDesbloqueio(2);
+
+        assertTrue(conquista.isDesbloqueada());
+    }
 }

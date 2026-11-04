@@ -35,4 +35,16 @@ class PontuacaoRankingTest {
         ranking.registrarComentarioUtil();
         assertEquals(5, ranking.getPontos());
     }
+
+    @Test
+    void deveRegistrarVariosTopicosEComentarios() {
+        PontuacaoRanking ranking = new PontuacaoRanking(1L, "Gabriel");
+
+        ranking.registrarTopico();
+        ranking.registrarTopico();
+        ranking.registrarComentarioUtil();
+        ranking.registrarComentarioUtil();
+
+        assertEquals(6, ranking.getPontos());
+    }
 }
