@@ -1,4 +1,4 @@
-package org.example.ac1.controller;
+package org.example.ac1.aluno.api;
 
 import org.example.ac1.dto.AlunoRequest;
 import org.example.ac1.dto.AlunoResponse;
