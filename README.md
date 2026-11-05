@@ -1031,11 +1031,11 @@ Preencher a tabela abaixo com o resultado da execução final, após todas as al
 
 | Indicador | Resultado |
 |---|---|
-| Testes executados | Preencher com o relatório Maven final |
-| Falhas | Preencher com o relatório Maven final |
-| Erros | Preencher com o relatório Maven final |
-| Ignorados | Preencher com o relatório Maven final |
-| Build | Preencher com o resultado final (`BUILD SUCCESS` ou falha) |
+| Testes executados | 59 |
+| Falhas | 0 |
+| Erros | 0 |
+| Ignorados | 0 |
+| Build | (`BUILD SUCCESS`) |
 
 Não foi registrado aqui um percentual global de cobertura do projeto. Os percentuais do JaCoCo devem ser informados por classe ou pacote somente quando acompanhados do relatório correspondente; a cobertura de uma classe não representa automaticamente a cobertura total da aplicação.
 
