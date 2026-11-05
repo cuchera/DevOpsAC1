@@ -1,0 +1,8 @@
+### Concluir curso (media 8.0)
+POST http://localhost:8080/api/alunos/processar-encerramento
+Content-Type: application/json
+
+{ "nome": "Ana", "cursoConcluido": true, "mediaFinal": 8.0 }
+
+### Listar alunos
+GET http://localhost:8080/api/alunos
