@@ -1,10 +1,11 @@
+
 package org.example.ac1.aluno.application;
 
-import org.example.ac1.aluno.domain.Aluno;
 import org.example.ac1.aluno.api.AlunoRequest;
 import org.example.ac1.aluno.api.AlunoResponse;
-import org.example.ac1.aluno.internal.persistence.AlunoEntity;
-import org.example.ac1.aluno.internal.persistence.AlunoRepository;
+import org.example.ac1.aluno.application.port.out.AlunoPort;
+import org.example.ac1.aluno.application.port.out.AlunoPort.AlunoDados;
+import org.example.ac1.aluno.domain.Aluno;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,19 +19,19 @@ import java.util.List;
 @Transactional
 public class AlunoService {
 
-    private final AlunoRepository repository;
+    private final AlunoPort repository;
     private final ApplicationEventPublisher eventos;
 
-    public AlunoService(AlunoRepository repository,
-                        ApplicationEventPublisher eventos) {
+    public AlunoService(
+            AlunoPort repository,
+            ApplicationEventPublisher eventos) {
         this.repository = repository;
         this.eventos = eventos;
     }
 
     @Transactional(readOnly = true)
     public List<AlunoResponse> listar() {
-        return repository.findAll()
-                .stream()
+        return repository.listar().stream()
                 .map(this::paraResponse)
                 .toList();
     }
@@ -40,81 +41,93 @@ public class AlunoService {
 
         if (request.nome() == null || request.nome().isBlank()) {
             throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Informe o nome do aluno.");
+                    HttpStatus.BAD_REQUEST, "Informe o nome do aluno.");
         }
 
-        AlunoEntity entidade = new AlunoEntity(request.nome().trim());
-        aplicarResultado(entidade, request);
+        Aluno dominio = new Aluno(
+                request.nome().trim(),
+                request.cursoConcluido(),
+                request.mediaFinal()
+        );
+        dominio.processarEncerramentoDoCurso();
 
-        AlunoEntity salvo = repository.save(entidade);
+        AlunoDados dados = new AlunoDados(
+                null,
+                request.nome().trim(),
+                request.cursoConcluido(),
+                request.mediaFinal(),
+                dominio.getQuantidadeCursosExtras()
+        );
+
+        AlunoDados salvo = repository.salvar(dados);
         publicarConclusao(salvo);
 
         return paraResponse(salvo);
     }
 
-    public AlunoResponse concluirOutroCurso(
-            Long id, AlunoRequest request) {
-
+    public AlunoResponse concluirOutroCurso(Long id, AlunoRequest request) {
         validarCurso(request);
 
-        AlunoEntity entidade = buscar(id);
-        aplicarResultado(entidade, request);
+        AlunoDados atual = buscar(id);
 
-        AlunoEntity salvo = repository.save(entidade);
+        Aluno dominio = new Aluno(
+                atual.nome(),
+                request.cursoConcluido(),
+                request.mediaFinal()
+        );
+        dominio.processarEncerramentoDoCurso();
+
+        AlunoDados atualizado = new AlunoDados(
+                atual.id(),
+                atual.nome(),
+                request.cursoConcluido(),
+                request.mediaFinal(),
+                atual.quantidadeCursosExtras()
+                        + dominio.getQuantidadeCursosExtras()
+        );
+
+        AlunoDados salvo = repository.salvar(atualizado);
         publicarConclusao(salvo);
 
         return paraResponse(salvo);
     }
 
-    private void publicarConclusao(AlunoEntity salvo) {
-        if (salvo.isCursoConcluido()) {
+    private void publicarConclusao(AlunoDados salvo) {
+        if (salvo.cursoConcluido()) {
             eventos.publishEvent(new CursoConcluidoEvent(
-                    salvo.getId(),
-                    salvo.getNome(),
-                    salvo.getMediaFinal(),
-                    salvo.getQuantidadeCursosExtras(),
-                    Instant.now()));
+                    salvo.id(),
+                    salvo.nome(),
+                    salvo.mediaFinal(),
+                    salvo.quantidadeCursosExtras(),
+                    Instant.now()
+            ));
         }
     }
 
     public AlunoResponse resgatar(Long id) {
-        AlunoEntity entidade = buscar(id);
+        AlunoDados atual = buscar(id);
 
-        if (entidade.getQuantidadeCursosExtras() <= 0) {
+        if (atual.quantidadeCursosExtras() <= 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
                     "Aluno não possui saldo de cursos extras.");
         }
 
-        entidade.resgatarCursoExtra();
+        AlunoDados atualizado = new AlunoDados(
+                atual.id(),
+                atual.nome(),
+                atual.cursoConcluido(),
+                atual.mediaFinal(),
+                atual.quantidadeCursosExtras() - 1
+        );
 
-        return paraResponse(repository.save(entidade));
+        return paraResponse(repository.salvar(atualizado));
     }
 
-    private AlunoEntity buscar(Long id) {
-        return repository.findById(id)
+    private AlunoDados buscar(Long id) {
+        return repository.buscarPorId(id)
                 .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Aluno não encontrado."));
-    }
-
-    private void aplicarResultado(
-            AlunoEntity entidade, AlunoRequest request) {
-
-        Aluno dominio = new Aluno(
-                entidade.getNome(),
-                request.cursoConcluido(),
-                request.mediaFinal()
-        );
-
-        dominio.processarEncerramentoDoCurso();
-
-        entidade.registrarResultado(
-                request.cursoConcluido(),
-                request.mediaFinal(),
-                dominio.getQuantidadeCursosExtras()
-        );
+                        HttpStatus.NOT_FOUND, "Aluno não encontrado."));
     }
 
     private void validarCurso(AlunoRequest request) {
@@ -134,21 +147,20 @@ public class AlunoService {
         }
     }
 
-    private AlunoResponse paraResponse(AlunoEntity entidade) {
+    private AlunoResponse paraResponse(AlunoDados dados) {
         Aluno dominio = new Aluno(
-                entidade.getNome(),
-                entidade.isCursoConcluido(),
-                entidade.getMediaFinal()
+                dados.nome(),
+                dados.cursoConcluido(),
+                dados.mediaFinal()
         );
-
         dominio.processarEncerramentoDoCurso();
 
         return AlunoResponse.de(
-                entidade.getId(),
-                entidade.getNome(),
-                entidade.isCursoConcluido(),
-                entidade.getMediaFinal(),
-                entidade.getQuantidadeCursosExtras(),
+                dados.id(),
+                dados.nome(),
+                dados.cursoConcluido(),
+                dados.mediaFinal(),
+                dados.quantidadeCursosExtras(),
                 dominio.getMensagem()
         );
     }
