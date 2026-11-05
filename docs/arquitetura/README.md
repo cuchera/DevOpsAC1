@@ -133,8 +133,6 @@ Propriedades: `app.notificacao.modo` (`assincrono` padrão | `sincrono`) e `app.
 | A decisão preserva a conclusão com consumidor fora do ar | `AssincronoComConsumidorIndisponivel.conclusaoPersisteMesmoComConsumidorForaDoAr` | 3 cursos extras + aluno persistido |
 | Caminho feliz | `AssincronoComConsumidorDisponivel.*` | Notificação após o commit; curso não concluído não publica evento |
 | No modo síncrono a notificação ocorre antes da resposta | `SincronoComConsumidorDisponivel.notificacaoAconteceAntesDaRespostaNaMesmaThread` | Notificação já registrada quando o método retorna |
-|          |       |                    |
-Prints e requisições: [`evidencias/B1-desafio-4/`](../../evidencias/B1-desafio-4/)
 
 Resultado: **5 testes verdes**, **100% de cobertura JaCoCo** (579/579 instruções, 42/42 branches).
 
