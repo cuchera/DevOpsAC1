@@ -788,3 +788,285 @@ A execução dos testes automatizados apresentou 28 testes executados, sem falha
 O Monólito Modular foi escolhido como uma evolução intermediária, permitindo melhorar a organização interna sem assumir antecipadamente a complexidade operacional de uma arquitetura distribuída.
 
 ---
+
+# Architecture Lab B1 — Desafio 2: Organização interna do Core
+
+## 11. Contexto do desafio
+
+O Desafio 2 trata da organização interna do Core para proteger as regras de negócio contra dependências técnicas. As regras de ranking, moedas, conquistas e recompensas podem mudar com frequência. Por isso, a aplicação deve evitar que o domínio dependa diretamente do banco de dados, do Spring Data JPA ou de detalhes de infraestrutura.
+
+O Core continua sendo uma aplicação Spring Boot. A proposta é evoluir a estrutura existente de forma incremental, sem reescrever o produto.
+
+### 11.1 Requisitos e atributos de qualidade considerados
+
+| Tipo | Identificação | Descrição |
+|---|---|---|
+| RF | RF01 | Disponibilizar o ranking de alunos. |
+| RF | RF02 | Controlar conquistas e regras de gamificação. |
+| RNF | — | Manutenibilidade: permitir alterar regras com menor impacto em outras partes do sistema. |
+| RNF | — | Testabilidade: permitir testar regras sem depender de banco de dados ou infraestrutura. |
+| RNF | — | Modificabilidade: permitir substituir detalhes técnicos sem reescrever o domínio. |
+
+### 11.2 ASRs selecionados
+
+| ASR | Influência na arquitetura |
+|---|---|
+| **Manutenibilidade** | As regras de negócio ficam concentradas no domínio e os detalhes de persistência ficam atrás de uma abstração. |
+| **Testabilidade** | O caso de uso trabalha com uma porta, permitindo utilizar um adapter Fake nos testes. |
+| **Modificabilidade** | A implementação JPA pode ser substituída por outra implementação da porta sem alterar o contrato utilizado pelo serviço. |
+
+### 11.3 Restrições do problema (RPC)
+
+- Manter o Core em Spring Boot.
+- Reaproveitar as regras e o código existente, sem reescrita integral.
+- Fazer a mudança de forma incremental.
+- Preservar o banco relacional existente.
+- Evitar que os casos de uso dependam diretamente de classes do Spring Data JPA.
+
+## 12. Alternativas arquiteturais
+
+| Alternativa | Vantagens | Custos e limitações |
+|---|---|---|
+| **A — Dependência direta de JPA** | Simples e familiar; menor quantidade de abstrações. | O serviço conhece o repositório concreto; testes e mudanças de persistência ficam mais dependentes da infraestrutura. |
+| **B — Ports & Adapters (Hexagonal)** | O caso de uso depende de uma porta; adapters implementam detalhes técnicos; facilita Fake/Mock e substituição da persistência. | Introduz interfaces, mapeamento de dados e classes adicionais. |
+| **C — Clean Architecture / Onion** | Reforça a regra de dependência apontando para o núcleo. | Pode introduzir uma estrutura mais ampla do que a necessária para a mudança incremental. |
+| **D — DDD tático** | Entidades e objetos de valor ajudam a modelar regras complexas do negócio. | DDD não substitui sozinho uma estratégia de inversão de dependência; aplicar todos os padrões agora pode ser desproporcional. |
+
+### Decisão
+
+Foi adotado **Ports & Adapters (Arquitetura Hexagonal) de forma incremental no módulo Aluno**. A decisão complementa o Monólito Modular do Desafio 1: a separação por capacidades organiza o Core, enquanto a arquitetura hexagonal define a direção das dependências dentro do módulo.
+
+Clean Architecture e Onion possuem princípios compatíveis de dependência direcionada ao núcleo. DDD tático pode ser aplicado onde a complexidade das regras justificar, mas não foi adotado como uma reestruturação completa.
+
+## 13. ADR-002 — Inverter a dependência de persistência do módulo Aluno
+
+| Campo | Registro |
+|---|---|
+| **Status** | Aceito / implementado no fluxo de persistência do módulo Aluno |
+| **Contexto** | `AlunoService` acessava diretamente o repositório JPA, aproximando o caso de uso de uma tecnologia específica e dificultando testes sem infraestrutura. |
+| **ASRs** | Manutenibilidade, testabilidade e modificabilidade. |
+| **RPCs** | Manter Spring Boot; preservar o banco relacional; reaproveitar o domínio existente; realizar evolução incremental. |
+| **Alternativas** | Dependência direta de JPA; Ports & Adapters; Clean/Onion; DDD tático como apoio à modelagem. |
+| **Decisão** | Criar a porta de saída `AlunoPort`, fazer `AlunoService` depender dela e implementar adapters para JPA e Fake. |
+| **Consequências positivas** | O serviço deixa de depender diretamente de `AlunoRepository`; a persistência pode ser substituída; testes podem usar dados em memória. |
+| **Trade-offs** | Há uma interface adicional, um objeto de dados para atravessar a fronteira e mapeamento entre o modelo da aplicação e a entidade JPA. |
+| **Limites atuais** | A inversão foi aplicada ao fluxo de persistência de Aluno. Isso não significa que todos os módulos e integrações já sigam Hexagonal. |
+| **Gatilho de revisão** | Revisar a abstração se surgirem novos adapters, múltiplas fontes de dados ou complexidade excessiva no mapeamento. |
+
+### 13.1 Dependência invertida
+
+**Antes:**
+
+```text
+AlunoController
+      |
+      v
+AlunoService
+      |
+      v
+AlunoRepository (Spring Data JPA)
+      |
+      v
+AlunoEntity
+      |
+      v
+PostgreSQL
+```
+
+**Depois:**
+
+```text
+AlunoController
+      |
+      v
+AlunoService ---------> AlunoPort
+                           ^
+                           |
+                    AlunoJpaAdapter
+                           |
+                    AlunoRepository
+                           |
+                      AlunoEntity
+                           |
+                       PostgreSQL
+
+Nos testes:
+
+AlunoService ---------> AlunoPort
+                           ^
+                           |
+                    AlunoFakeAdapter
+                    (dados em memória)
+```
+
+O serviço depende do contrato `AlunoPort`, enquanto os adapters implementam esse contrato. O tipo `AlunoDados` evita expor `AlunoEntity` para a camada de aplicação.
+
+## 14. C4 — Componentes do módulo Aluno após a inversão
+
+O diagrama representa o fluxo de persistência do módulo Aluno após o Desafio 2. O adapter Fake é utilizado nos testes e não faz parte do deploy de produção.
+
+```mermaid
+flowchart LR
+    HTTP["Requisição HTTP"] --> C["AlunoController"]
+    C --> S["AlunoService"]
+    S --> D["Aluno (domínio)"]
+    S --> P["AlunoPort"]
+    P -. "implementada por" .-> JPA["AlunoJpaAdapter"]
+    JPA --> R["AlunoRepository"]
+    R --> E["AlunoEntity"]
+    E --> DB[("PostgreSQL")]
+    F["AlunoFakeAdapter (testes)"] -. "implementa a mesma porta" .-> P
+```
+
+| Componente | Responsabilidade |
+|---|---|
+| `AlunoController` | Receber requisições HTTP e delegar operações ao serviço. |
+| `AlunoService` | Coordenar os casos de uso e utilizar a porta de persistência. |
+| `Aluno` | Concentrar as regras de domínio relacionadas ao encerramento do curso e aos cursos extras. |
+| `AlunoPort` | Definir o contrato de saída utilizado pela aplicação para listar, consultar e salvar dados de aluno. |
+| `AlunoJpaAdapter` | Implementar a porta utilizando o repositório JPA e realizar o mapeamento dos dados. |
+| `AlunoRepository` | Executar operações de persistência por meio do Spring Data JPA. |
+| `AlunoEntity` | Representar os dados persistidos com mapeamento JPA. |
+| `AlunoFakeAdapter` | Implementar a mesma porta em memória, para testes sem banco de dados. |
+
+## 15. Mini-lab — Substituição do adapter de persistência
+
+O mini-lab demonstra que a camada de aplicação pode trabalhar com o contrato `AlunoPort`, sem precisar conhecer qual implementação está fornecendo os dados.
+
+### 15.1 Porta de saída
+
+A interface `AlunoPort` define operações de listagem, consulta por identificador e salvamento. O tipo `AlunoDados` representa os dados necessários à aplicação e não expõe a entidade JPA.
+
+```java
+package org.example.ac1.aluno.application.port.out;
+
+import java.util.List;
+import java.util.Optional;
+
+public interface AlunoPort {
+    List<AlunoDados> listar();
+    Optional<AlunoDados> buscarPorId(Long id);
+    AlunoDados salvar(AlunoDados aluno);
+
+    record AlunoDados(
+        Long id,
+        String nome,
+        boolean cursoConcluido,
+        double mediaFinal,
+        int quantidadeCursosExtras
+    ) {}
+}
+```
+
+### 15.2 Adapter JPA
+
+`AlunoJpaAdapter`, localizado em `aluno.internal.persistence`, implementa `AlunoPort` e utiliza `AlunoRepository` para persistir os dados. A camada de aplicação conhece somente o contrato, não a implementação JPA.
+
+### 15.3 Adapter Fake
+
+`AlunoFakeAdapter`, localizado no código de teste, implementa o mesmo contrato utilizando uma coleção em memória. Assim, é possível validar operações sem iniciar PostgreSQL ou depender de uma instância de JPA.
+
+O Fake é uma implementação de teste e não deve ser utilizado no ambiente de produção.
+
+### 15.4 O que o mini-lab demonstra
+
+- O serviço depende de uma abstração (`AlunoPort`), e não de `AlunoRepository`.
+- O adapter JPA concentra o acesso à tecnologia de persistência.
+- O adapter Fake permite exercitar o contrato com armazenamento em memória.
+- A regra de domínio `Aluno` pode ser testada sem banco de dados.
+- A mudança foi feita sem reescrever o Core ou remover Spring Boot.
+
+## 16. Evolução das regras de domínio de gamificação
+
+Além da inversão de dependência no módulo Aluno, foram criadas classes iniciais para representar regras de Ranking, Conquista e Recompensa. Elas são provas de conceito de domínio e não representam funcionalidades de produto totalmente integradas.
+
+### 16.1 Ranking
+
+A classe `PontuacaoRanking` mantém a pontuação de um aluno e concentra operações de registro de participação. Para o mini-lab, foi adotada a seguinte regra de pontuação:
+
+| Participação | Pontos |
+|---|---:|
+| Criar um tópico no fórum | 2 |
+| Publicar um comentário útil | 1 |
+
+`RankingService` ordena as pontuações de forma decrescente.
+
+A pontuação numérica é uma decisão de implementação adotada para tornar a regra verificável. O requisito do exercício descreve a participação no fórum e a recompensa mensal, mas não define valores numéricos para cada ação. A concessão mensal de um curso ao vencedor ainda depende de integração com dados do fórum, período mensal e catálogo de cursos; esse fluxo completo não está demonstrado nesta implementação.
+
+### 16.2 Conquistas
+
+A classe `Conquista` representa uma conquista com uma quantidade mínima de cursos concluídos. O método de verificação desbloqueia a conquista quando a quantidade informada atinge o limite definido.
+
+A implementação cobre a regra isolada de desbloqueio. Não há, nesta etapa, catálogo persistido de conquistas ou integração completa com todos os eventos da plataforma.
+
+### 16.3 Recompensas
+
+Foram criadas duas classes iniciais:
+
+- `CarteiraMoedas`: controla saldo, adição e gasto de moedas, impedindo quantidades inválidas ou gastos superiores ao saldo.
+- `ProgressaoAluno`: acompanha cursos concluídos e, ao atingir o limite definido na implementação, ativa o plano Premium, disponibiliza um indicador de voucher e credita moedas.
+
+Essas regras são exemplos de domínio isolado. O resgate real de voucher, a integração com pagamentos/planos e a persistência dessas informações não fazem parte do mini-lab concluído.
+
+## 17. Evidências e validação
+
+A validação do Desafio 2 deve demonstrar a preservação das regras e a substituição do adapter.
+
+| Evidência | O que comprova |
+|---|---|
+| Testes de `Aluno` | Regras de encerramento do curso e concessão de cursos extras sem depender da persistência. |
+| Testes de `AlunoFakeAdapter` | Operações do contrato usando armazenamento em memória. |
+| Testes de `AlunoJpaAdapter` | Mapeamento entre o contrato da aplicação e a persistência JPA. |
+| Testes de Ranking, Conquista e Recompensa | Regras de domínio isoladas para as novas capacidades. |
+| Resultado do Maven | Compilação e execução da suíte de testes. |
+| Histórico Git | Evolução incremental e versionada da mudança. |
+
+### 17.1 Comando de validação
+
+```powershell
+.\mvnw.cmd clean test
+```
+
+Preencher a tabela abaixo com o resultado da execução final, após todas as alterações do Desafio 2:
+
+| Indicador | Resultado |
+|---|---|
+| Testes executados | Preencher com o relatório Maven final |
+| Falhas | Preencher com o relatório Maven final |
+| Erros | Preencher com o relatório Maven final |
+| Ignorados | Preencher com o relatório Maven final |
+| Build | Preencher com o resultado final (`BUILD SUCCESS` ou falha) |
+
+Não foi registrado aqui um percentual global de cobertura do projeto. Os percentuais do JaCoCo devem ser informados por classe ou pacote somente quando acompanhados do relatório correspondente; a cobertura de uma classe não representa automaticamente a cobertura total da aplicação.
+
+### 17.2 Histórico de implementação
+
+A evolução do Desafio 2 foi realizada incrementalmente: criação das regras de domínio, introdução da porta de saída, implementação do adapter JPA, implementação do Fake para testes e ampliação dos testes automatizados.
+
+Os commits do Git devem ser mantidos como evidência do desenvolvimento por etapas. O histórico do repositório é a fonte para identificar os hashes e as datas efetivas de cada alteração.
+
+## 18. Consequências e próximos passos
+
+### Benefícios obtidos
+
+- `AlunoService` deixou de depender diretamente do repositório JPA.
+- A persistência passou a ser acessada por meio de uma porta definida pela aplicação.
+- O adapter Fake permite testar o contrato sem banco de dados.
+- As regras de domínio de Ranking, Conquista e Recompensa começaram a ser isoladas em classes próprias.
+- A evolução preserva o Core Spring Boot e a estratégia de Monólito Modular definida no Desafio 1.
+
+### Limitações e trabalho futuro
+
+- Aplicar portas e adapters às demais integrações somente quando houver necessidade concreta.
+- Avaliar testes de arquitetura (por exemplo, ArchUnit) para reforçar as regras de dependência entre pacotes.
+- Integrar a pontuação do Ranking aos eventos reais do fórum e ao fechamento mensal.
+- Integrar Conquistas e Recompensas ao fluxo de conclusão de cursos.
+- Definir persistência e contratos para moedas, vouchers e progressão Premium.
+- Registrar e anexar o resultado final do Maven e os relatórios JaCoCo atualizados.
+
+### Conclusão do Desafio 2
+
+A decisão adotada protege o núcleo da aplicação contra detalhes de persistência ao introduzir Ports & Adapters no módulo Aluno. O caso de uso depende de `AlunoPort`, enquanto as implementações JPA e Fake ficam atrás do mesmo contrato. Isso permite substituir a tecnologia de persistência e testar o fluxo com uma implementação em memória, sem reescrever o Core.
+
+A mudança complementa o Monólito Modular do Desafio 1: a separação por capacidade organiza o Core, enquanto a arquitetura hexagonal define a direção das dependências dentro do módulo. As novas regras de Ranking, Conquista e Recompensa foram iniciadas como provas de conceito, mantendo explícitas as integrações que ainda precisam ser desenvolvidas.
+"""
