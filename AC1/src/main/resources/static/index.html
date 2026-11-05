@@ -3,218 +3,364 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Educação Continuada Gamificada — Cursos Extras</title>
+    <title>Educação Continuada Gamificada</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.prod.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios@1.7.9/dist/axios.min.js"></script>
+    <style>[v-cloak] { display: none; }</style>
 </head>
-<body class="bg-slate-100 text-slate-800 antialiased font-sans p-6">
+<body class="bg-slate-100 text-slate-800 antialiased font-sans">
 
-<div id="app" class="max-w-4xl mx-auto">
+<div id="app" v-cloak class="max-w-6xl mx-auto p-4 md:p-6">
 
     <!-- Cabeçalho -->
-    <header class="mb-8 text-center">
-        <h1 class="text-3xl font-bold text-indigo-700">🎓 Gamificação de Cursos Extras</h1>
-        <p class="text-slate-600 mt-1">Acumule e resgate cursos extras conforme conclui novas etapas</p>
+    <header class="mb-4 flex flex-col md:flex-row md:items-end md:justify-between gap-2">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold text-indigo-700">🎓 Educação Continuada Gamificada</h1>
+            <p class="text-slate-600 text-sm mt-1">Cursos extras, recomendação por IA e eventos dos laboratórios</p>
+        </div>
     </header>
 
-    <!-- Formulário Principal: Novo Cadastro / Concluir +1 Curso -->
-    <div class="bg-white p-6 rounded-xl shadow-md mb-8">
-        <h2 class="text-xl font-semibold mb-4 text-slate-700">
-            {{ alunoSelecionadoId ? `🎓 Registrar +1 Curso para (ID: ${alunoSelecionadoId})` : '➕ Cadastrar Primeiro Curso do Aluno' }}
-        </h2>
+    <!-- Faixa de status dos componentes (D3 / D6) -->
+    <section class="bg-white rounded-xl shadow-sm border border-slate-200 px-4 py-3 mb-6 flex flex-wrap items-center gap-3 text-sm">
+        <span class="font-semibold text-slate-600">Componentes:</span>
 
-        <form @submit.prevent="salvar" class="space-y-4">
-            <div>
-                <label class="block text-sm font-medium text-slate-700 mb-1">Nome do Aluno</label>
-                <input
-                        v-model="form.nome"
-                        type="text"
-                        placeholder="Ex: Gabriel Silva"
-                        :disabled="!!alunoSelecionadoId"
-                        required
-                        class="w-full border-slate-300 rounded-lg shadow-sm p-2.5 border focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100"
-                >
-            </div>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border"
+              :class="classeStatus(status.core)">
+            <span class="w-2 h-2 rounded-full" :class="pontoStatus(status.core)"></span>
+            Core Java · {{ textoStatus(status.core) }}
+        </span>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Média Final do Curso</label>
-                    <input
-                            v-model.number="form.mediaFinal"
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            max="10"
-                            placeholder="Ex: 8.5"
-                            required
-                            class="w-full border-slate-300 rounded-lg shadow-sm p-2.5 border focus:ring-indigo-500 focus:border-indigo-500"
-                    >
-                </div>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border"
+              :class="classeStatus(status.ia)">
+            <span class="w-2 h-2 rounded-full" :class="pontoStatus(status.ia)"></span>
+            Serviço de IA · {{ textoStatus(status.ia) }}
+        </span>
 
-                <div class="flex items-center pt-6">
-                    <label class="inline-flex items-center cursor-pointer">
-                        <input v-model="form.cursoConcluido" type="checkbox" class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                        <span class="ml-3 text-sm font-medium text-slate-700">Curso Concluído?</span>
-                    </label>
-                </div>
-            </div>
+        <span class="text-slate-400 text-xs">atualizado {{ status.atualizadoEm || '—' }}</span>
 
-            <div class="flex gap-2 pt-2">
-                <button
-                        type="submit"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2.5 px-4 rounded-lg transition"
-                >
-                    {{ alunoSelecionadoId ? 'Concluir Curso e Acumular Recompensa (+3)' : 'Cadastrar e Processar Encerramento' }}
-                </button>
+        <span class="md:ml-auto flex items-center gap-3">
+            <span class="text-slate-500 text-xs">Observabilidade (D6):</span>
+            <a :href="urlGrafana" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">Grafana ↗</a>
+            <a :href="urlPrometheus" target="_blank" rel="noopener" class="text-indigo-600 hover:underline">Prometheus ↗</a>
+        </span>
+    </section>
 
-                <button
-                        v-if="alunoSelecionadoId"
-                        @click="cancelarSelecao"
-                        type="button"
-                        class="bg-slate-400 hover:bg-slate-500 text-white font-semibold py-2.5 px-4 rounded-lg transition"
-                >
-                    Cancelar
-                </button>
-            </div>
-        </form>
+    <!-- Avisos (D4 e erros) -->
+    <div class="fixed top-4 right-4 z-50 space-y-2 w-[22rem] max-w-[calc(100vw-2rem)]">
+        <div v-for="aviso in avisos" :key="aviso.id"
+             class="rounded-lg shadow-lg border px-4 py-3 text-sm"
+             :class="{
+                'bg-emerald-50 border-emerald-200 text-emerald-900': aviso.tipo === 'sucesso',
+                'bg-amber-50 border-amber-200 text-amber-900': aviso.tipo === 'atencao',
+                'bg-rose-50 border-rose-200 text-rose-900': aviso.tipo === 'erro'
+             }">
+            <div class="font-semibold">{{ aviso.titulo }}</div>
+            <div class="mt-0.5">{{ aviso.texto }}</div>
+        </div>
     </div>
 
-    <!-- Tabela de Alunos e Saldo Gamificado -->
-    <div class="bg-white p-6 rounded-xl shadow-md">
-        <div class="flex justify-between items-center mb-4">
-            <h2 class="text-xl font-semibold text-slate-700">📋 Painel do Aluno e Saldo</h2>
-            <button @click="carregarAlunos" class="text-sm text-indigo-600 hover:underline flex items-center gap-1">
-                🔄 Atualizar Tabela
-            </button>
-        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                <tr class="bg-slate-100 border-b">
-                    <th class="p-3 text-sm font-semibold text-slate-600">ID</th>
-                    <th class="p-3 text-sm font-semibold text-slate-600">Nome</th>
-                    <th class="p-3 text-sm font-semibold text-slate-600">Última Média / Resultado do Curso</th>
-                    <th class="p-3 text-sm font-semibold text-slate-600">Status</th>
-                    <th class="p-3 text-sm font-semibold text-slate-600">Saldo Cursos Extras</th>
-                    <th class="p-3 text-sm font-semibold text-slate-600 text-center">Ações Gamificadas</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr v-for="aluno in alunos" :key="aluno.id" class="border-b hover:bg-slate-50 transition">
-                    <td class="p-3 font-mono text-sm">{{ aluno.id }}</td>
-                    <td class="p-3 font-medium text-slate-800">{{ aluno.nome }}</td>
-                    <td class="p-3">
-                        <div class="font-bold">{{ aluno.mediaFinal }}</div>
-                        <div class="text-xs text-slate-500 mt-1">
-                            {{ aluno.mensagem }}
+        <!-- Coluna principal -->
+        <div class="lg:col-span-2 space-y-6">
+
+            <!-- Formulário: cadastro / concluir +1 curso -->
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-lg font-semibold mb-4 text-slate-700">
+                    {{ alunoSelecionadoId ? `🎓 Registrar +1 curso para ${form.nome} (ID ${alunoSelecionadoId})` : '➕ Cadastrar primeiro curso do aluno' }}
+                </h2>
+
+                <form @submit.prevent="salvar" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nome do aluno</label>
+                        <input v-model="form.nome" type="text" placeholder="Ex.: Gabriel Silva"
+                               :disabled="!!alunoSelecionadoId" required
+                               class="w-full border-slate-300 rounded-lg p-2.5 border focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-100">
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Média final do curso</label>
+                            <input v-model.number="form.mediaFinal" type="number" step="0.1" min="0" max="10"
+                                   placeholder="Ex.: 8.5" required
+                                   class="w-full border-slate-300 rounded-lg p-2.5 border focus:ring-indigo-500 focus:border-indigo-500">
                         </div>
-                    </td>
-                    <td class="p-3">
-                <span
-                        :class="aluno.cursoConcluido ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'"
-                        class="px-2.5 py-1 text-xs font-semibold rounded-full"
-                >
-                  {{ aluno.cursoConcluido ? 'Concluído' : 'Pendente' }}
-                </span>
-                    </td>
-                    <td class="p-3">
-                <span
-                        :class="aluno.quantidadeCursosExtras > 0 ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-slate-100 text-slate-500'"
-                        class="px-3 py-1.5 text-xs font-bold rounded-full border"
-                >
-                  🎁 {{ aluno.quantidadeCursosExtras }} Cursos Disponíveis
-                </span>
-                    </td>
-                    <td class="p-3 text-center space-x-2">
-                        <button
-                                @click="prepararNovoCurso(aluno)"
-                                class="bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium text-xs px-2.5 py-1.5 rounded-md border border-blue-200 transition"
-                        >
-                            +1 Curso (+3)
+
+                        <div class="flex items-center md:pt-6">
+                            <label class="inline-flex items-center cursor-pointer">
+                                <input v-model="form.cursoConcluido" type="checkbox" class="sr-only peer">
+                                <div class="relative w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                                <span class="ml-3 text-sm font-medium text-slate-700">Curso concluído?</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-2 pt-1">
+                        <button type="submit" :disabled="salvando"
+                                class="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-semibold py-2.5 px-4 rounded-lg transition">
+                            {{ salvando ? 'Processando…' : (alunoSelecionadoId ? 'Concluir curso e acumular recompensa' : 'Cadastrar e processar encerramento') }}
                         </button>
-                        <button
-                                @click="resgatarExtra(aluno.id)"
-                                :disabled="aluno.quantidadeCursosExtras <= 0"
-                                class="bg-amber-50 hover:bg-amber-100 text-amber-700 font-medium text-xs px-2.5 py-1.5 rounded-md border border-amber-200 disabled:opacity-40 disabled:cursor-not-allowed transition"
-                        >
-                            Resgatar (-1)
+                        <button v-if="alunoSelecionadoId" @click="limparFormulario" type="button"
+                                class="bg-slate-400 hover:bg-slate-500 text-white font-semibold py-2.5 px-4 rounded-lg transition">
+                            Cancelar
                         </button>
-                    </td>
-                </tr>
-                <tr v-if="alunos.length === 0">
-                    <td colspan="6" class="text-center p-6 text-slate-400">Nenhum aluno cadastrado. Adicione um acima!</td>
-                </tr>
-                </tbody>
-            </table>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Tabela de alunos -->
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-slate-700">📋 Alunos e saldo de cursos extras</h2>
+                    <button @click="carregarAlunos" class="text-sm text-indigo-600 hover:underline">🔄 Atualizar</button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                        <tr class="bg-slate-50 border-b">
+                            <th class="p-2.5 font-semibold text-slate-600">ID</th>
+                            <th class="p-2.5 font-semibold text-slate-600">Nome</th>
+                            <th class="p-2.5 font-semibold text-slate-600">Média / resultado</th>
+                            <th class="p-2.5 font-semibold text-slate-600">Status</th>
+                            <th class="p-2.5 font-semibold text-slate-600">Saldo</th>
+                            <th class="p-2.5 font-semibold text-slate-600 text-center">Ações</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr v-for="aluno in alunos" :key="aluno.id"
+                            class="border-b hover:bg-slate-50 transition"
+                            :class="{ 'bg-indigo-50/60': iaAluno && iaAluno.id === aluno.id }">
+                            <td class="p-2.5 font-mono">{{ aluno.id }}</td>
+                            <td class="p-2.5 font-medium text-slate-800">{{ aluno.nome }}</td>
+                            <td class="p-2.5">
+                                <div class="font-bold">{{ aluno.mediaFinal }}</div>
+                                <div class="text-xs text-slate-500 mt-0.5">{{ aluno.mensagem }}</div>
+                            </td>
+                            <td class="p-2.5">
+                                <span class="px-2 py-0.5 text-xs font-semibold rounded-full"
+                                      :class="aluno.cursoConcluido ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'">
+                                    {{ aluno.cursoConcluido ? 'Concluído' : 'Pendente' }}
+                                </span>
+                            </td>
+                            <td class="p-2.5 whitespace-nowrap">
+                                <span class="px-2.5 py-1 text-xs font-bold rounded-full border"
+                                      :class="aluno.quantidadeCursosExtras > 0 ? 'bg-indigo-100 text-indigo-800 border-indigo-300' : 'bg-slate-100 text-slate-500'">
+                                    🎁 {{ aluno.quantidadeCursosExtras }}
+                                </span>
+                            </td>
+                            <td class="p-2.5">
+                                <div class="flex flex-wrap justify-center gap-1.5">
+                                    <button @click="prepararNovoCurso(aluno)"
+                                            class="bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-md border border-blue-200">
+                                        +1 curso
+                                    </button>
+                                    <button @click="resgatarExtra(aluno)" :disabled="aluno.quantidadeCursosExtras <= 0"
+                                            class="bg-amber-50 hover:bg-amber-100 text-amber-700 text-xs px-2 py-1 rounded-md border border-amber-200 disabled:opacity-40 disabled:cursor-not-allowed">
+                                        Resgatar
+                                    </button>
+                                    <button @click="abrirIa(aluno)"
+                                            class="bg-violet-50 hover:bg-violet-100 text-violet-700 text-xs px-2 py-1 rounded-md border border-violet-200">
+                                        ✨ IA
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr v-if="alunos.length === 0">
+                            <td colspan="6" class="text-center p-6 text-slate-400">Nenhum aluno cadastrado. Adicione um acima!</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- Coluna lateral -->
+        <div class="space-y-6">
+
+            <!-- Painel de IA (D3) -->
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-slate-700">✨ Assistente de IA</h2>
+                    <button v-if="iaAluno" @click="fecharIa" class="text-xs text-slate-500 hover:underline">fechar</button>
+                </div>
+
+                <p v-if="!iaAluno" class="text-sm text-slate-500">
+                    Clique em <strong>✨ IA</strong> em um aluno para pedir uma recomendação de curso ou fazer uma pergunta ao assistente.
+                </p>
+
+                <div v-else class="space-y-4">
+                    <div class="text-sm">
+                        Aluno: <strong>{{ iaAluno.nome }}</strong>
+                        <span class="text-slate-400 ml-1">(ID {{ iaAluno.id }}, média {{ iaAluno.mediaFinal }})</span>
+                    </div>
+
+                    <button @click="pedirRecomendacao" :disabled="ia.carregando"
+                            class="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-sm font-semibold py-2 rounded-lg">
+                        {{ ia.carregando === 'recomendacao' ? 'Consultando…' : 'Pedir recomendação de curso' }}
+                    </button>
+
+                    <form @submit.prevent="perguntar" class="space-y-2">
+                        <textarea v-model="ia.pergunta" rows="2" placeholder="Pergunte algo ao assistente…"
+                                  class="w-full border border-slate-300 rounded-lg p-2 text-sm focus:ring-violet-500 focus:border-violet-500"></textarea>
+                        <button type="submit" :disabled="ia.carregando || !ia.pergunta.trim()"
+                                class="w-full bg-white border border-violet-300 text-violet-700 hover:bg-violet-50 disabled:opacity-50 text-sm font-semibold py-2 rounded-lg">
+                            {{ ia.carregando === 'assistente' ? 'Perguntando…' : 'Perguntar ao assistente' }}
+                        </button>
+                    </form>
+
+                    <div v-if="ia.resposta" class="rounded-lg border p-3 text-sm"
+                         :class="ia.resposta.disponivel ? 'bg-violet-50 border-violet-200 text-violet-900' : 'bg-amber-50 border-amber-200 text-amber-900'">
+                        <div class="font-semibold mb-1">
+                            {{ ia.resposta.disponivel ? ia.resposta.titulo : '⚠️ IA indisponível no momento' }}
+                        </div>
+                        <div>{{ ia.resposta.conteudo }}</div>
+                        <div v-if="!ia.resposta.disponivel" class="text-xs mt-2 opacity-80">
+                            O cadastro, a conclusão e o resgate de cursos continuam funcionando normalmente.
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Eventos IoT (D5) -->
+            <section class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-lg font-semibold text-slate-700">📡 Eventos dos laboratórios</h2>
+                    <span class="text-xs text-slate-400">via MQTT</span>
+                </div>
+
+                <p v-if="eventosIot.length === 0" class="text-sm text-slate-500">
+                    Nenhum evento recebido ainda. Rode o simulador e o consumidor IoT para ver os eventos aqui.
+                </p>
+
+                <ul v-else class="divide-y divide-slate-100 max-h-80 overflow-y-auto -mx-1">
+                    <li v-for="(evento, i) in eventosIot" :key="evento.recebidoEm + i"
+                        class="flex items-center justify-between gap-2 px-1 py-2 text-sm">
+                        <div class="min-w-0">
+                            <div class="font-medium text-slate-700 truncate">{{ evento.sensor || 'sensor' }}</div>
+                            <div class="text-xs text-slate-400">{{ horario(evento.recebidoEm) }}</div>
+                        </div>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <span class="font-mono">{{ evento.temperatura }}°{{ evento.unidade || 'C' }}</span>
+                            <span class="px-2 py-0.5 text-xs font-semibold rounded-full"
+                                  :class="evento.status === 'ALERTA' ? 'bg-rose-100 text-rose-700' : 'bg-emerald-100 text-emerald-700'">
+                                {{ evento.status || '—' }}
+                            </span>
+                        </div>
+                    </li>
+                </ul>
+            </section>
         </div>
     </div>
-
 </div>
 
 <script>
-    const { createApp, ref, onMounted } = Vue;
+    const { createApp, ref, reactive, onMounted, onUnmounted } = Vue;
 
     createApp({
         setup() {
-            const API_URL = '/api/alunos';
+            const API_ALUNOS = '/api/alunos';
+            const host = window.location.hostname || 'localhost';
+            const urlGrafana = `http://${host}:3000/d/ac1-arquitetura`;
+            const urlPrometheus = `http://${host}:9090/targets`;
+
             const alunos = ref([]);
             const alunoSelecionadoId = ref(null);
-            const form = ref({
-                nome: '',
-                cursoConcluido: true,
-                mediaFinal: null
-            });
+            const salvando = ref(false);
+            const form = ref({ nome: '', cursoConcluido: true, mediaFinal: null });
 
+            const status = reactive({ core: null, ia: null, atualizadoEm: '' });
+            const eventosIot = ref([]);
+            const avisos = ref([]);
+
+            const iaAluno = ref(null);
+            const ia = reactive({ carregando: null, pergunta: '', resposta: null });
+
+            let proximoAviso = 1;
+            const avisar = (tipo, titulo, texto, ms = 6000) => {
+                const id = proximoAviso++;
+                avisos.value.push({ id, tipo, titulo, texto });
+                setTimeout(() => { avisos.value = avisos.value.filter(a => a.id !== id); }, ms);
+            };
+
+            const mensagemErro = (err, padrao) =>
+                (err && err.response && err.response.data && (err.response.data.message || err.response.data.detail)) || padrao;
+
+            // ---- Status dos componentes ----
+            const classeStatus = (s) => s === true ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                : s === false ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-slate-50 border-slate-200 text-slate-500';
+            const pontoStatus = (s) => s === true ? 'bg-emerald-500' : s === false ? 'bg-rose-500' : 'bg-slate-300';
+            const textoStatus = (s) => s === true ? 'no ar' : s === false ? 'fora do ar' : 'verificando…';
+
+            const carregarStatus = async () => {
+                try {
+                    const res = await axios.get('/api/status');
+                    status.core = res.data.core === 'UP';
+                    status.ia = !!res.data.iaDisponivel;
+                } catch (err) {
+                    status.core = false;
+                    status.ia = false;
+                }
+                status.atualizadoEm = new Date().toLocaleTimeString('pt-BR');
+            };
+
+            // ---- Alunos ----
             const carregarAlunos = async () => {
                 try {
-                    const res = await axios.get(API_URL);
+                    const res = await axios.get(API_ALUNOS);
                     alunos.value = res.data;
+                    if (iaAluno.value) {
+                        iaAluno.value = res.data.find(a => a.id === iaAluno.value.id) || iaAluno.value;
+                    }
                 } catch (err) {
-                    console.error("Erro ao carregar alunos:", err);
+                    console.error('Erro ao carregar alunos:', err);
                 }
             };
 
             const salvar = async () => {
+                salvando.value = true;
                 try {
-                    if (alunoSelecionadoId.value) {
-                        // Executa o acúmulo de +1 curso no saldo
-                        await axios.post(`${API_URL}/${alunoSelecionadoId.value}/concluir-outro-curso`, form.value);
+                    const res = alunoSelecionadoId.value
+                        ? await axios.post(`${API_ALUNOS}/${alunoSelecionadoId.value}/concluir-outro-curso`, form.value)
+                        : await axios.post(`${API_ALUNOS}/processar-encerramento`, form.value);
+
+                    const aluno = res.data;
+                    if (aluno.cursoConcluido) {
+                        // D4: a conclusão já foi gravada; a notificação segue em segundo plano.
+                        avisar('sucesso', `Conclusão registrada para ${aluno.nome}`,
+                            `${aluno.mensagem} Saldo: ${aluno.quantidadeCursosExtras} curso(s) extra(s). ` +
+                            'A notificação ao aluno é enviada em segundo plano e não bloqueia a conclusão.');
                     } else {
-                        // Executa o 1º cadastro
-                        await axios.post(`${API_URL}/processar-encerramento`, form.value);
+                        avisar('atencao', `Registro salvo para ${aluno.nome}`, aluno.mensagem);
                     }
                     limparFormulario();
                     await carregarAlunos();
                 } catch (err) {
-                    alert("Erro ao processar requisição. Verifique se a API Spring Boot está ativa na porta 8080.");
+                    avisar('erro', 'Não foi possível registrar o curso',
+                        mensagemErro(err, 'Verifique se a API Spring Boot está no ar.'));
                     console.error(err);
+                } finally {
+                    salvando.value = false;
                 }
             };
 
-            const resgatarExtra = async (id) => {
+            const resgatarExtra = async (aluno) => {
                 try {
-                    await axios.post(`${API_URL}/${id}/resgatar-curso-extra`);
+                    const res = await axios.post(`${API_ALUNOS}/${aluno.id}/resgatar-curso-extra`);
+                    avisar('sucesso', 'Curso extra resgatado',
+                        `${aluno.nome} agora tem ${res.data.quantidadeCursosExtras} curso(s) extra(s).`, 4000);
                     await carregarAlunos();
                 } catch (err) {
-                    alert("Não foi possível resgatar o curso extra.");
-                    console.error(err);
+                    avisar('erro', 'Não foi possível resgatar', mensagemErro(err, 'Tente novamente.'));
                 }
             };
 
             const prepararNovoCurso = (aluno) => {
                 alunoSelecionadoId.value = aluno.id;
-                form.value = {
-                    nome: aluno.nome,
-                    cursoConcluido: true,
-                    mediaFinal: null
-                };
-            };
-
-            const cancelarSelecao = () => {
-                limparFormulario();
+                form.value = { nome: aluno.nome, cursoConcluido: true, mediaFinal: null };
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             };
 
             const limparFormulario = () => {
@@ -222,17 +368,64 @@
                 form.value = { nome: '', cursoConcluido: true, mediaFinal: null };
             };
 
-            onMounted(carregarAlunos);
+            // ---- IA (D3) ----
+            const abrirIa = (aluno) => {
+                iaAluno.value = aluno;
+                ia.resposta = null;
+                ia.pergunta = '';
+            };
+            const fecharIa = () => { iaAluno.value = null; ia.resposta = null; };
+
+            const chamarIa = async (tipo, url, corpo, titulo) => {
+                ia.carregando = tipo;
+                ia.resposta = null;
+                try {
+                    const res = await axios.post(url, corpo);
+                    ia.resposta = { ...res.data, titulo };
+                } catch (err) {
+                    if (err.response && err.response.status === 503 && err.response.data) {
+                        ia.resposta = { ...err.response.data, titulo };
+                        status.ia = false;
+                    } else {
+                        ia.resposta = { disponivel: false, conteudo: mensagemErro(err, 'Falha ao consultar a IA.') };
+                    }
+                } finally {
+                    ia.carregando = null;
+                }
+            };
+
+            const pedirRecomendacao = () => chamarIa('recomendacao',
+                `${API_ALUNOS}/${iaAluno.value.id}/ia/recomendacao`, null, '🎯 Recomendação');
+
+            const perguntar = () => chamarIa('assistente',
+                `${API_ALUNOS}/${iaAluno.value.id}/ia/assistente`, { pergunta: ia.pergunta.trim() }, '💬 Resposta do assistente');
+
+            // ---- IoT (D5) ----
+            const carregarEventosIot = async () => {
+                try {
+                    const res = await axios.get('/api/sensores');
+                    eventosIot.value = res.data;
+                } catch (err) {
+                    console.error('Erro ao carregar eventos IoT:', err);
+                }
+            };
+            const horario = (iso) => iso ? new Date(iso).toLocaleTimeString('pt-BR') : '';
+
+            let intervalo = null;
+            onMounted(() => {
+                carregarAlunos();
+                carregarStatus();
+                carregarEventosIot();
+                intervalo = setInterval(() => { carregarStatus(); carregarEventosIot(); }, 5000);
+            });
+            onUnmounted(() => clearInterval(intervalo));
 
             return {
-                alunos,
-                form,
-                alunoSelecionadoId,
-                salvar,
-                prepararNovoCurso,
-                resgatarExtra,
-                cancelarSelecao,
-                carregarAlunos
+                alunos, form, alunoSelecionadoId, salvando, status, eventosIot, avisos,
+                iaAluno, ia, urlGrafana, urlPrometheus,
+                classeStatus, pontoStatus, textoStatus, horario,
+                carregarAlunos, salvar, resgatarExtra, prepararNovoCurso, limparFormulario,
+                abrirIa, fecharIa, pedirRecomendacao, perguntar
             };
         }
     }).mount('#app');
