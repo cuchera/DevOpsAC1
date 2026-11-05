@@ -1,7 +1,11 @@
 from fastapi import FastAPI
+from prometheus_fastapi_instrumentator import Instrumentator
 from pydantic import BaseModel
 
 app = FastAPI(title="AC1 AI Service")
+
+# Desafio 6: expoe /metrics para o Prometheus (latencia, erros e volume do servico de IA)
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 
 class RecommendationRequest(BaseModel):
