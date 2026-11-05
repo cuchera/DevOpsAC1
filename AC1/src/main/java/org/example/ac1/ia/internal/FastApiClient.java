@@ -1,14 +1,18 @@
 package org.example.ac1.ia.internal;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.example.ac1.ia.api.IaResponse;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
-import java.util.Map;
+import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 
 @Component
 public class FastApiClient {
@@ -16,45 +20,56 @@ public class FastApiClient {
     private static final Logger LOGGER =
             LoggerFactory.getLogger(FastApiClient.class);
 
-    private final RestClient restClient;
+    private final String baseUrl;
+    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public FastApiClient(
             @Value("${ai.service.base-url:http://localhost:8000}") String baseUrl) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        this.baseUrl = baseUrl;
     }
 
     public IaResponse recomendar(Long alunoId, String nome, double mediaFinal) {
-        try {
-            IaPayload payload = restClient.post()
-                    .uri("/recommendations")
-                    .body(Map.of(
-                            "studentId", alunoId,
-                            "studentName", nome,
-                            "finalGrade", mediaFinal))
-                    .retrieve()
-                    .body(IaPayload.class);
-            return resposta(payload);
-        } catch (RestClientException exception) {
-            return indisponivel(exception);
-        }
+        return post("/recommendations",
+                new RecommendationPayload(alunoId, nome, mediaFinal));
     }
 
     public IaResponse responder(Long alunoId, String pergunta) {
+        return post("/assistant", new AssistantPayload(alunoId, pergunta));
+    }
+
+    private IaResponse post(String path, Object payload) {
         try {
-            IaPayload payload = restClient.post()
-                    .uri("/assistant")
-                    .body(Map.of(
-                            "studentId", alunoId,
-                            "question", pergunta))
-                    .retrieve()
-                    .body(IaPayload.class);
-            return resposta(payload);
-        } catch (RestClientException exception) {
+            String json = objectMapper.writeValueAsString(payload);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + path))
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(
+                            json.getBytes(StandardCharsets.UTF_8)))
+                    .build();
+
+            HttpResponse<String> response = httpClient.send(
+                    request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                throw new IOException(
+                        "HTTP " + response.statusCode() + ": " + response.body());
+            }
+
+            IaPayload result = objectMapper.readValue(
+                    response.body(), IaPayload.class);
+            return resposta(result);
+        } catch (IOException | InterruptedException
+                 | IllegalArgumentException exception) {
+            if (exception instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
             return indisponivel(exception);
         }
     }
 
-    private IaResponse indisponivel(RestClientException exception) {
+    private IaResponse indisponivel(Exception exception) {
         LOGGER.warn("Serviço de IA indisponível: {}", exception.getMessage());
         return new IaResponse(
                 false,
@@ -73,5 +88,14 @@ public class FastApiClient {
     }
 
     private record IaPayload(String content) {
+    }
+
+    private record RecommendationPayload(
+            Long studentId,
+            String studentName,
+            double finalGrade) {
+    }
+
+    private record AssistantPayload(Long studentId, String question) {
     }
 }

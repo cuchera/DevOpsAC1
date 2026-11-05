@@ -4,8 +4,8 @@
 
 | Requisito | RNF/ASR | RPC | Decisão | Evidência |
 |---|---|---|---|---|
-| RF03 Recomendação inteligente | Deploy independente, tolerância a falhas, escalabilidade | Core continua Java; IA pode ficar indisponível | FastAPI separado, consumido por REST | [evidência do mini-lab](../../evidencias/BDD3-IA.md) |
-| RF04 Assistente educacional | Deploy independente, tolerância a falhas, escalabilidade | ML/RAG permanecem fora do Core | Mesma fronteira de IA inicialmente, com endpoints independentes | [evidência do mini-lab](../../evidencias/BDD3-IA.md) |
+| RF03 Recomendação inteligente | Deploy independente, tolerância a falhas, escalabilidade | Core continua Java; IA pode ficar indisponível | FastAPI separado, consumido por REST | [evidência do mini-lab](../../evidencias/Desafio3-IA.md) |
+| RF04 Assistente educacional | Deploy independente, tolerância a falhas, escalabilidade | ML/RAG permanecem fora do Core | Mesma fronteira de IA inicialmente, com endpoints independentes | [evidência do mini-lab](../../evidencias/Desafio3-IA.md) |
 
 ## ASRs selecionados
 
