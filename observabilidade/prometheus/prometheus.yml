@@ -1,0 +1,23 @@
+# Desafio 6 - Prometheus coleta metricas de cada componente separadamente.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: ac1-core
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["app:8080"]
+        labels:
+          componente: core-java
+
+  - job_name: ai-service
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["ai-service:8000"]
+        labels:
+          componente: ia-python
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

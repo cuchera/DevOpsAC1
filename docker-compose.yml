@@ -36,6 +36,8 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: postgres
       AI_SERVICE_BASE_URL: http://ai-service:8000
+      # Desafio 6: liga a falha simulada da notificacao (SIMULAR_FALHA_NOTIFICACAO=true)
+      APP_NOTIFICACAO_SIMULARINDISPONIBILIDADE: ${SIMULAR_FALHA_NOTIFICACAO:-false}
 
   ai-service:
     build:
@@ -53,6 +55,36 @@ services:
       - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
     restart: unless-stopped
 
+  # Desafio 6 - Observabilidade
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: ac1-prometheus
+    volumes:
+      - ./observabilidade/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - app
+      - ai-service
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: ac1-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+    volumes:
+      - ./observabilidade/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observabilidade/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
 volumes:
   postgres_data:
   pgadmin_data:
+  grafana_data:
