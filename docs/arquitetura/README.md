@@ -132,9 +132,17 @@ Propriedades: `app.notificacao.modo` (`assincrono` padrão | `sincrono`) e `app.
 | Acoplamento síncrono faz a falha do consumidor derrubar a conclusão | `Sincrono.falhaDeNotificacaoDerrubaAConclusaoEFazRollback` | Exceção + nenhum aluno persistido |
 | A decisão preserva a conclusão com consumidor fora do ar | `AssincronoComConsumidorIndisponivel.conclusaoPersisteMesmoComConsumidorForaDoAr` | 3 cursos extras + aluno persistido |
 | Caminho feliz | `AssincronoComConsumidorDisponivel.*` | Notificação após o commit; curso não concluído não publica evento |
-
+| No modo síncrono a notificação ocorre antes da resposta | `SincronoComConsumidorDisponivel.notificacaoAconteceAntesDaRespostaNaMesmaThread` | Notificação já registrada quando o método retorna |
+|          |       |                    |
 Prints e requisições: [`evidencias/B1-desafio-4/`](../../evidencias/B1-desafio-4/)
 
-### Levado para a PoC da AF
+Resultado: **5 testes verdes**, **100% de cobertura JaCoCo** (579/579 instruções, 42/42 branches).
 
-Eventos de domínio pós-commit para efeitos colaterais da conclusão de curso, com o gatilho documentado para outbox + broker.
+| Síncrono (baseline acoplado) | Assíncrono pós-commit (decisão) |
+|---|---|
+| ![](../../evidencias/B1-desafio-4/05-sincrono-falha-e-rollback.png) | ![](../../evidencias/B1-desafio-4/06-assincrono-conclusao-salva.png) |
+| 500 + aluno **não** gravado | 201 + aluno gravado com 3 cursos extras |
+
+![Log: requisição em nio-8080-exec-1, notificação falha em task-1](../../evidencias/B1-desafio-4/07-assincrono-log-warn.png)
+
+Demais evidências (testes e JaCoCo): [`evidencias/B1-desafio-4/`](../../evidencias/B1-desafio-4/)
