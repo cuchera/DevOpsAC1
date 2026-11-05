@@ -13,6 +13,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 
 @Component
 public class FastApiClient {
@@ -27,6 +28,27 @@ public class FastApiClient {
     public FastApiClient(
             @Value("${ai.service.base-url:http://localhost:8000}") String baseUrl) {
         this.baseUrl = baseUrl;
+    }
+
+    /** Consulta o /health do servico de IA (usado pela faixa de status do front). */
+    public boolean disponivel() {
+        try {
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(URI.create(baseUrl + "/health"))
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .timeout(Duration.ofSeconds(2))
+                    .GET()
+                    .build();
+            HttpResponse<Void> response = httpClient.send(
+                    request, HttpResponse.BodyHandlers.discarding());
+            return response.statusCode() >= 200 && response.statusCode() < 300;
+        } catch (IOException | InterruptedException
+                 | IllegalArgumentException exception) {
+            if (exception instanceof InterruptedException) {
+                Thread.currentThread().interrupt();
+            }
+            return false;
+        }
     }
 
     public IaResponse recomendar(Long alunoId, String nome, double mediaFinal) {
