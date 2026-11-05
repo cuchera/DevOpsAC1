@@ -16,26 +16,36 @@ def mvnw(String args) {
     }
 }
 
-// Tenta o /actuator/health pela porta publicada no host (18 x 5s = 90s)
-def waitForHealth(String port) {
-    String url = "http://localhost:${port}/actuator/health"
+// Espera uma URL responder 200 (e, opcionalmente, conter um texto). 18 x 5s = 90s.
+// Desafio 6: usada para health check de cada componente e para validar metricas.
+def waitForUrl(String nome, String url) {
+    waitForUrl(nome, url, '')
+}
+
+def waitForUrl(String nome, String url, String contem) {
     for (int i = 1; i <= 18; i++) {
         int rc
         if (isUnix()) {
-            rc = sh(returnStatus: true, script: "curl -sf ${url}")
+            String filtro = contem ? " | grep -q '${contem}'" : ''
+            rc = sh(returnStatus: true, script: "curl -sf ${url}${filtro}")
         } else {
+            String teste = contem ? " -and \$r.Content -match '${contem}'" : ''
             rc = bat(returnStatus: true, script:
                 'powershell -NoProfile -Command "try { $r = Invoke-WebRequest -UseBasicParsing ' + url +
-                '; if ($r.StatusCode -eq 200) { exit 0 } else { exit 1 } } catch { exit 1 }"')
+                '; if ($r.StatusCode -eq 200' + teste + ') { exit 0 } else { exit 1 } } catch { exit 1 }"')
         }
         if (rc == 0) {
-            echo "API saudavel (tentativa ${i})"
+            echo "${nome} OK (tentativa ${i})"
             return
         }
-        echo "Aguardando API... (${i}/18)"
+        echo "Aguardando ${nome}... (${i}/18)"
         sleep 5
     }
-    error('Health check falhou: API nao respondeu em 90s')
+    error("Verificacao falhou: ${nome} nao respondeu em 90s (${url})")
+}
+
+def waitForHealth(String port) {
+    waitForUrl('Core Java', "http://localhost:${port}/actuator/health")
 }
 
 pipeline {
@@ -55,6 +65,9 @@ pipeline {
         COMPOSE_FILE = 'docker-compose.yml'
         API_PORT = '8081'
         PGADMIN_PORT = '5050'
+        AI_PORT = '8001'
+        PROMETHEUS_PORT = '9090'
+        GRAFANA_PORT = '3000'
     }
 
     stages {
@@ -111,6 +124,11 @@ pipeline {
             }
         }
 
+        // Desafio 6: cobertura abaixo do minimo (pom.xml: jacoco.minimo) BLOQUEIA o deploy.
+        stage('2.1 - Quality Gate - Cobertura JaCoCo') {
+            steps { script { mvnw('-B jacoco:check') } }
+        }
+
         stage('3 - CI - Qualidade PMD') {
             steps { script { mvnw('-B pmd:pmd -DskipTests') } }
             post {
@@ -123,7 +141,7 @@ pipeline {
         }
 
         stage('5 - CD - Build dos Containers') {
-            steps { script { runCmd('docker compose -f ' + env.COMPOSE_FILE + ' build app') } }
+            steps { script { runCmd('docker compose -f ' + env.COMPOSE_FILE + ' build app ai-service') } }
         }
 
         stage('6 - Registry - Docker Hub (opcional)') {
@@ -151,7 +169,7 @@ pipeline {
             steps {
                 script {
                     runCmd('docker compose -f ' + env.COMPOSE_FILE + ' down --remove-orphans')
-                    runCmd('docker compose -f ' + env.COMPOSE_FILE + ' up -d postgres pgadmin app')
+                    runCmd('docker compose -f ' + env.COMPOSE_FILE + ' up -d postgres pgadmin ai-service mosquitto app prometheus grafana')
                 }
             }
         }
@@ -161,11 +179,27 @@ pipeline {
                 script {
                     try {
                         waitForHealth(env.API_PORT)
+                        waitForUrl('Servico de IA (Python)', "http://localhost:${env.AI_PORT}/health")
                     } catch (err) {
                         runCmd('docker compose -f ' + env.COMPOSE_FILE + ' ps')
                         runCmd('docker compose -f ' + env.COMPOSE_FILE + ' logs --tail=100 app')
                         throw err
                     }
+                }
+            }
+        }
+
+        // Desafio 6: o deploy so e considerado valido se a stack de observabilidade
+        // esta no ar e cada componente expoe as metricas que sustentam os ADRs.
+        stage('8.1 - Observabilidade - Prometheus, Grafana e metricas') {
+            steps {
+                script {
+                    waitForUrl('Prometheus', "http://localhost:${env.PROMETHEUS_PORT}/-/ready")
+                    waitForUrl('Grafana', "http://localhost:${env.GRAFANA_PORT}/api/health")
+                    waitForUrl('Metricas do Core (ADR-004)',
+                        "http://localhost:${env.API_PORT}/actuator/prometheus", 'ac1_notificacao_entregas_total')
+                    waitForUrl('Metricas do servico de IA (ADR-003)',
+                        "http://localhost:${env.AI_PORT}/metrics", 'http_request')
                 }
             }
         }
@@ -185,12 +219,14 @@ pipeline {
                 echo "API: http://localhost:${API_PORT}"
                 echo "Health: http://localhost:${API_PORT}/actuator/health"
                 echo "pgAdmin: http://localhost:${PGADMIN_PORT}"
+                echo "Prometheus (targets): http://localhost:${PROMETHEUS_PORT}/targets"
+                echo "Grafana (admin/admin): http://localhost:${GRAFANA_PORT}/d/ac1-arquitetura"
             }
         }
     }
 
     post {
-        success { echo 'Pipeline concluido: testes, qualidade, deploy HOMOL e health check aprovados.' }
+        success { echo 'Pipeline concluido: testes, quality gate, deploy HOMOL, health check e observabilidade aprovados.' }
         failure { echo 'Pipeline interrompido. Consulte o stage e os logs para identificar ambiente, teste ou servico responsavel.' }
        always {
            archiveArtifacts artifacts: 'AC1/target/site/jacoco/*,AC1/target/site/pmd.html,frontend/cypress/screenshots/,frontend/cypress/videos/*', allowEmptyArchive: true

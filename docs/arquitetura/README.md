@@ -20,6 +20,9 @@ Cada desafio segue a trilha: **RF → RNF → ASR + RPC → alternativas → ADR
 | D4 | Tolerância a falhas / disponibilidade da conclusão | Notificação fora da transação (pós-commit, assíncrona) | ADR-004 |
 | D4 | Desacoplamento (modificabilidade) | Core publica evento; publicador não conhece consumidores | ADR-004 |
 | D4 | Consistência (imediata × eventual) | Recompensa síncrona; notificação eventual | ADR-004 |
+| D6 | Observabilidade | Métricas expostas por componente + Prometheus/Grafana versionados | ADR-006 |
+| D6 | Confiabilidade do deploy | Quality gate de cobertura e verificações por componente bloqueiam o deploy | ADR-006 |
+| D6 | Deploy independente | Imagem, health check e coleta de métricas separados para Core e `ai-service` | ADR-006 |
 
 ---
 
@@ -1156,3 +1159,175 @@ O consumidor recebeu os eventos publicados pelo simulador, transformou os dados 
 Os logs da aplicação demonstram o recebimento dos eventos IoT pelo endpoint `/api/sensores`.
 
 ![Integração Spring Boot](../../evidencias/Ariane/IoT-MQTT/evidencia_springboot_iot.png)
+---
+
+## Desafio 6 — CI/CD e Observabilidade
+
+**Problema:** a solução passou a ter Core Java, serviço Python de IA (D3), broker MQTT (D5) e integração por eventos (D4). A arquitetura só é sustentável se a equipe conseguir **testar, implantar e observar** cada parte com segurança — e se as métricas comprovarem que as decisões anteriores funcionam em execução.
+
+### Rastreabilidade
+
+Todos os RFs afetados → RNF (observabilidade, confiabilidade, deploy independente) → ASR + RPC → pipeline único × pipelines por componente → **ADR-006** → C4 Deployment + C4 Container final → testes, quality gate, Prometheus e Grafana com falhas provocadas.
+
+### Requisitos funcionais afetados
+
+- **RF02 Conquistas / RF05 Notificações** (D4): conclusão de curso e notificação.
+- **RF03 / RF04 IA** (D3): recomendação e assistente via `ai-service`.
+- **RF06 IoT** (D5): eventos encaminhados ao Core.
+- Operação e evolução da solução (build, deploy, verificação e observação).
+
+### RNF analisados (FURPS+)
+
+Observabilidade, deploy independente, confiabilidade, testabilidade, recuperabilidade, desempenho.
+
+### ASRs escolhidos
+
+| ASR | Por que altera a arquitetura |
+|---|---|
+| Observabilidade | Cada componente passa a **expor métricas** (`/actuator/prometheus`, `/metrics`) e a stack ganha Prometheus e Grafana: muda a implantação e cria contratos de operação entre componentes. |
+| Confiabilidade do deploy | O pipeline passa a ter **portões que bloqueiam o deploy** (testes, cobertura mínima, health check por componente, métricas presentes): muda a operação e o que significa "versão pronta". |
+| Deploy independente | Core e `ai-service` têm imagem, health check e coleta de métricas **separados**, permitindo verificar e substituir um sem o outro: muda a implantação. |
+
+Testabilidade, recuperabilidade e desempenho entram como consequências: os testes alimentam o quality gate, e latência/erros são observados nos painéis.
+
+### Restrições e premissas (RPC)
+
+- **Jenkins** é a base da esteira (Jenkinsfile já existente na AC1).
+- **Prometheus/Grafana** são as ferramentas do laboratório.
+- Artefatos e configurações **versionados** no repositório (Jenkinsfile, `docker-compose.yml`, `observabilidade/`).
+- Um único repositório, equipe de 6 pessoas, Core como Monólito Modular (ADR-001).
+
+### Decisão do Tech Lead
+
+| Pergunta | Resposta |
+|---|---|
+| Serviços independentes exigem pipelines independentes? | **Ainda não.** Com um único repositório, uma equipe e poucos componentes, um pipeline com **stages e verificações por componente** dá isolamento suficiente. Pipelines separados passam a valer quando os componentes tiverem repositórios, equipes ou cadências de release próprios. |
+| O que deve bloquear o deploy? | Teste vermelho; cobertura abaixo de `jacoco.minimo` (80%); build de imagem falhando; health check de **qualquer** componente falhando; Prometheus/Grafana fora; métricas arquiteturais ausentes. |
+| Quais métricas validam ASRs anteriores? | ADR-004: `ac1_cursos_concluidos_total` × `ac1_notificacao_entregas_total{resultado}`. ADR-003: `up{job="ai-service"}` + status HTTP das rotas de IA. ADR-005: throughput de `/api/sensores`. |
+| Métrica técnica × evidência arquitetural? | Métrica técnica descreve a saúde de um recurso (CPU, latência média). **Evidência arquitetural** é uma métrica observada sob uma **condição provocada** que confirma ou refuta uma hipótese de um ADR (ex.: com a notificação falhando, as conclusões continuam subindo). |
+
+### Alternativas e trade-offs
+
+| | A) Pipeline único com stages por componente | B) Pipelines independentes por componente |
+|---|---|---|
+| Isolamento de falhas | Médio: falha de um componente interrompe a execução inteira | Alto: cada componente publica sozinho |
+| Custo de manutenção | Baixo: um Jenkinsfile | Alto: N Jenkinsfiles, credenciais e jobs |
+| Integração entre componentes | Verificada no mesmo deploy de HOMOL | Exige ambiente/contrato de integração separado |
+| Aderência ao contexto | Um repositório, uma equipe, Monólito Modular | Faz sentido com repositórios/equipes separados |
+
+**Seleção de métricas**
+
+| Métrica | Tipo | Valida |
+|---|---|---|
+| `ac1_cursos_concluidos_total`, `ac1_notificacao_entregas_total{resultado}` | **Arquitetural** (negócio sob falha) | ADR-004 — falha de notificação não impede conclusão |
+| `up{job}` por componente | **Arquitetural** (disponibilidade isolada) | ADR-003 / ADR-006 — componentes observados e operados separadamente |
+| `http_server_requests_seconds_count{uri=~".*/ia/.*", status}` | **Arquitetural** (degradação controlada) | ADR-003 — IA fora → 503 só nas rotas de IA |
+| `http_server_requests_seconds_count{uri="/api/sensores"}` | Throughput | ADR-005 — eventos IoT chegando ao Core |
+| Latência média por rota | Técnica (apoio) | Desempenho geral do Core |
+
+### ADR-006 — Pipeline único com portões por componente e observabilidade orientada a ADRs
+
+- **Status:** Aceito
+- **Contexto:** a solução tem Core Java, `ai-service` Python, broker MQTT e eventos internos. O Jenkinsfile da AC1 verificava apenas o Core. Não havia métricas expostas nem stack de observabilidade.
+- **ASRs/RPCs:** observabilidade, confiabilidade do deploy, deploy independente; Jenkins, Prometheus/Grafana e configuração versionada.
+- **Alternativas:** pipeline único com stages por componente; pipelines independentes por componente.
+- **Decisão:**
+  - Manter **um Jenkinsfile** com stages por componente: build das imagens `app` e `ai-service`, health check de cada um e verificação das métricas de cada um.
+  - Adicionar o **quality gate de cobertura** (`jacoco:check`, mínimo configurável em `jacoco.minimo`) antes do package.
+  - Expor métricas no Core (Micrometer + `/actuator/prometheus`) e no `ai-service` (`prometheus-fastapi-instrumentator`, `/metrics`).
+  - Subir **Prometheus** (coleta por componente) e **Grafana** (dashboard provisionado "AC1 — Evidências arquiteturais") no `docker-compose`.
+  - Criar métricas de negócio que comprovam o ADR-004.
+- **Consequências:**
+  - (+) Deploy só segue se todos os componentes estiverem saudáveis e observáveis.
+  - (+) Decisões anteriores passam a ter evidência contínua em execução, não só em teste.
+  - (+) Configuração de observabilidade versionada e reproduzível (`docker compose up`).
+  - (−) Uma falha no `ai-service` também interrompe o deploy do Core (acoplamento do pipeline único).
+  - (−) Mais dois containers para operar (Prometheus e Grafana).
+  - **Gatilho de revisão:** componentes em repositórios/equipes separados ou cadência de release diferente → pipelines por componente (alternativa B).
+
+### C4 — Deployment (ambiente HOMOL)
+
+```mermaid
+flowchart TB
+  subgraph JENKINS["Jenkins (agente local)"]
+    PIPE["Jenkinsfile<br/>CI: testes, JaCoCo gate, PMD, package<br/>CD: build, deploy, health, métricas"]
+  end
+  subgraph HOST["Máquina de HOMOL — Docker Engine / docker compose"]
+    subgraph NET["Rede do compose"]
+      APP["ac1-app<br/>Core Java/Spring Boot<br/>:8081 → 8080"]
+      AI["ac1-ai-service<br/>FastAPI<br/>:8001 → 8000"]
+      MQ["ac1-mosquitto<br/>MQTT :1883"]
+      PG[("ac1-postgres<br/>:5432")]
+      PROM["ac1-prometheus<br/>:9090"]
+      GRAF["ac1-grafana<br/>:3000"]
+      PGA["ac1-pgadmin<br/>:5050"]
+    end
+  end
+  PIPE -->|"docker compose build / up"| HOST
+  PIPE -->|"health + métricas"| APP
+  PIPE -->|"health + métricas"| AI
+  APP -->|JDBC| PG
+  APP -->|"REST/JSON"| AI
+  PROM -->|"scrape /actuator/prometheus"| APP
+  PROM -->|"scrape /metrics"| AI
+  GRAF -->|PromQL| PROM
+  PGA --> PG
+```
+
+### C4 — Container (visão final do B1)
+
+```mermaid
+flowchart LR
+  ALUNO["Aluno / Admin"] -->|"HTTP/JSON"| CORE
+  DEV["Dispositivos IoT<br/>(simulador)"] -->|"MQTT"| MQ["Broker MQTT<br/>Mosquitto"]
+  MQ -->|"MQTT"| CONS["Consumidor IoT<br/>Python"]
+  CONS -->|"HTTP /api/sensores"| CORE
+
+  subgraph CORE["Core Java/Spring Boot — Monólito Modular (ADR-001/002)"]
+    ALU["Módulo aluno<br/>domínio + portas/adapters"]
+    NOT["Módulo notificacao<br/>eventos pós-commit (ADR-004)"]
+    IA["Módulo ia<br/>cliente REST (ADR-003)"]
+    OBS["Módulo observabilidade<br/>métricas (ADR-006)"]
+    ALU -. CursoConcluidoEvent .-> NOT
+    ALU -. CursoConcluidoEvent .-> OBS
+  end
+
+  CORE -->|JDBC| DB[("PostgreSQL")]
+  IA -->|"REST/JSON"| AIS["AI Service<br/>FastAPI (ML + RAG)"]
+  PROM["Prometheus"] -->|scrape| CORE
+  PROM -->|scrape| AIS
+  GRAF["Grafana"] --> PROM
+  JEN["Jenkins"] -->|"build, deploy, verificação"| CORE
+  JEN -->|"build, deploy, verificação"| AIS
+```
+
+### Implementação
+
+| Arquivo | Papel |
+|---|---|
+| `AC1/Jenkinsfile` | Stages novos: `2.1 Quality Gate JaCoCo`, build `app` + `ai-service`, health do `ai-service`, `8.1 Observabilidade` (Prometheus, Grafana e presença das métricas) |
+| `AC1/pom.xml` | `micrometer-registry-prometheus`; regra `jacoco:check` com `jacoco.minimo` |
+| `AC1/src/main/resources/application.properties` | Expõe `health,info,metrics,prometheus` |
+| `AC1/src/main/java/org/example/ac1/observabilidade/MetricasArquiteturais.java` | Contadores de conclusões e de notificações por resultado |
+| `AC1/src/main/java/org/example/ac1/observabilidade/MetricasConclusaoListener.java` | Conta conclusões só após o commit |
+| `AC1/src/main/java/org/example/ac1/notificacao/NotificacaoAssincronaListener.java` | Registra sucesso/falha da notificação |
+| `AC1/src/test/java/org/example/ac1/MetricasArquiteturaisTest.java` | Prova que as métricas refletem o ADR-004 |
+| `ai-service/app/main.py`, `ai-service/requirements.txt` | `/metrics` do serviço de IA |
+| `observabilidade/prometheus/prometheus.yml` | Coleta por componente (`ac1-core`, `ai-service`) |
+| `observabilidade/grafana/` | Datasource e dashboard provisionados |
+| `docker-compose.yml` | Serviços `prometheus` e `grafana`; variável `SIMULAR_FALHA_NOTIFICACAO` |
+
+### Evidência
+
+| Hipótese | Como provocar | Resultado esperado |
+|---|---|---|
+| O pipeline bloqueia versões sem qualidade | `mvnw clean test jacoco:check` | Testes verdes e cobertura ≥ mínimo; abaixo disso o build falha |
+| Cada componente é observado separadamente | Prometheus → *Status → Targets* | `ac1-core` e `ai-service` UP |
+| ADR-004 vale em execução | `SIMULAR_FALHA_NOTIFICACAO=true` + tráfego | Notificações em falha sobem **e** conclusões continuam subindo |
+| ADR-003 vale em execução | `docker compose stop ai-service` + tráfego | `ai-service` FORA, rotas de IA em 503, Core UP e conclusões seguindo |
+
+Prints e script de tráfego: [`evidencias/B1-desafio-6/`](../../evidencias/B1-desafio-6/)
+
+### Levado para a PoC da AF
+
+Pipeline único com portões por componente e dashboard de evidências arquiteturais, com gatilho documentado para pipelines independentes.

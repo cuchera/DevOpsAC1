@@ -1,6 +1,7 @@
 package org.example.ac1.notificacao;
 
 import org.example.ac1.aluno.application.CursoConcluidoEvent;
+import org.example.ac1.observabilidade.MetricasArquiteturais;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -17,9 +18,11 @@ public class NotificacaoAssincronaListener {
     private static final Logger log = LoggerFactory.getLogger(NotificacaoAssincronaListener.class);
 
     private final NotificacaoSender sender;
+    private final MetricasArquiteturais metricas;
 
-    public NotificacaoAssincronaListener(NotificacaoSender sender) {
+    public NotificacaoAssincronaListener(NotificacaoSender sender, MetricasArquiteturais metricas) {
         this.sender = sender;
+        this.metricas = metricas;
     }
 
     @Async
@@ -27,7 +30,9 @@ public class NotificacaoAssincronaListener {
     public void aoConcluirCurso(CursoConcluidoEvent evento) {
         try {
             sender.enviar(evento);
+            metricas.notificacaoEntregue();
         } catch (RuntimeException e) {
+            metricas.notificacaoFalhou();
             log.warn("[NOTIFICACAO] falhou para alunoId={} (conclusao NAO afetada): {}",
                     evento.alunoId(), e.getMessage());
         }
