@@ -1,3 +1,4 @@
+
 package org.example.ac1.aluno.application;
 
 import org.example.ac1.aluno.api.AlunoRequest;
@@ -5,11 +6,13 @@ import org.example.ac1.aluno.api.AlunoResponse;
 import org.example.ac1.aluno.application.port.out.AlunoPort;
 import org.example.ac1.aluno.application.port.out.AlunoPort.AlunoDados;
 import org.example.ac1.aluno.domain.Aluno;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -17,9 +20,13 @@ import java.util.List;
 public class AlunoService {
 
     private final AlunoPort repository;
+    private final ApplicationEventPublisher eventos;
 
-    public AlunoService(AlunoPort repository) {
+    public AlunoService(
+            AlunoPort repository,
+            ApplicationEventPublisher eventos) {
         this.repository = repository;
+        this.eventos = eventos;
     }
 
     @Transactional(readOnly = true)
@@ -45,31 +52,56 @@ public class AlunoService {
         dominio.processarEncerramentoDoCurso();
 
         AlunoDados dados = new AlunoDados(
-                null, request.nome().trim(),
-                request.cursoConcluido(), request.mediaFinal(),
+                null,
+                request.nome().trim(),
+                request.cursoConcluido(),
+                request.mediaFinal(),
                 dominio.getQuantidadeCursosExtras()
         );
 
-        return paraResponse(repository.salvar(dados));
+        AlunoDados salvo = repository.salvar(dados);
+        publicarConclusao(salvo);
+
+        return paraResponse(salvo);
     }
 
     public AlunoResponse concluirOutroCurso(Long id, AlunoRequest request) {
         validarCurso(request);
 
         AlunoDados atual = buscar(id);
+
         Aluno dominio = new Aluno(
-                atual.nome(), request.cursoConcluido(), request.mediaFinal()
+                atual.nome(),
+                request.cursoConcluido(),
+                request.mediaFinal()
         );
         dominio.processarEncerramentoDoCurso();
 
         AlunoDados atualizado = new AlunoDados(
-                atual.id(), atual.nome(),
-                request.cursoConcluido(), request.mediaFinal(),
+                atual.id(),
+                atual.nome(),
+                request.cursoConcluido(),
+                request.mediaFinal(),
                 atual.quantidadeCursosExtras()
                         + dominio.getQuantidadeCursosExtras()
         );
 
-        return paraResponse(repository.salvar(atualizado));
+        AlunoDados salvo = repository.salvar(atualizado);
+        publicarConclusao(salvo);
+
+        return paraResponse(salvo);
+    }
+
+    private void publicarConclusao(AlunoDados salvo) {
+        if (salvo.cursoConcluido()) {
+            eventos.publishEvent(new CursoConcluidoEvent(
+                    salvo.id(),
+                    salvo.nome(),
+                    salvo.mediaFinal(),
+                    salvo.quantidadeCursosExtras(),
+                    Instant.now()
+            ));
+        }
     }
 
     public AlunoResponse resgatar(Long id) {
@@ -82,8 +114,11 @@ public class AlunoService {
         }
 
         AlunoDados atualizado = new AlunoDados(
-                atual.id(), atual.nome(), atual.cursoConcluido(),
-                atual.mediaFinal(), atual.quantidadeCursosExtras() - 1
+                atual.id(),
+                atual.nome(),
+                atual.cursoConcluido(),
+                atual.mediaFinal(),
+                atual.quantidadeCursosExtras() - 1
         );
 
         return paraResponse(repository.salvar(atualizado));
@@ -114,13 +149,18 @@ public class AlunoService {
 
     private AlunoResponse paraResponse(AlunoDados dados) {
         Aluno dominio = new Aluno(
-                dados.nome(), dados.cursoConcluido(), dados.mediaFinal()
+                dados.nome(),
+                dados.cursoConcluido(),
+                dados.mediaFinal()
         );
         dominio.processarEncerramentoDoCurso();
 
         return AlunoResponse.de(
-                dados.id(), dados.nome(), dados.cursoConcluido(),
-                dados.mediaFinal(), dados.quantidadeCursosExtras(),
+                dados.id(),
+                dados.nome(),
+                dados.cursoConcluido(),
+                dados.mediaFinal(),
+                dados.quantidadeCursosExtras(),
                 dominio.getMensagem()
         );
     }

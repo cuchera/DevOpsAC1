@@ -16,7 +16,7 @@ class AlunoServiceFakeAdapterTest {
     @BeforeEach
     void configurar() {
         AlunoFakeAdapter fake = new AlunoFakeAdapter();
-        service = new AlunoService(fake);
+        service = new AlunoService(fake, evento -> {});
     }
 
     @Test
