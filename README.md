@@ -814,8 +814,17 @@ O Core continua sendo uma aplicação Spring Boot. A proposta é evoluir a estru
 | **Manutenibilidade** | As regras de negócio ficam concentradas no domínio e os detalhes de persistência ficam atrás de uma abstração. |
 | **Testabilidade** | O caso de uso trabalha com uma porta, permitindo utilizar um adapter Fake nos testes. |
 | **Modificabilidade** | A implementação JPA pode ser substituída por outra implementação da porta sem alterar o contrato utilizado pelo serviço. |
+### 11.3 Influência dos ASRs nas dimensões arquiteturais
 
-### 11.3 Restrições do problema (RPC)
+| Dimensão | Como os ASRs influenciam a arquitetura |
+|---|---|
+| **Estrutura** | A separação entre domínio, aplicação, portas e adapters reduz o acoplamento e facilita a manutenção e evolução das regras de negócio. |
+| **Comunicação** | O `AlunoService` utiliza o contrato `AlunoPort` para acessar a persistência, sem conhecer diretamente a implementação concreta. |
+| **Dados** | O objeto `AlunoDados` desacopla a aplicação da entidade JPA. O adapter realiza o mapeamento entre os dados da aplicação e a persistência. |
+| **Implantação** | A aplicação permanece como um único projeto Spring Boot, sem necessidade de criar novos serviços ou containers. |
+| **Operação** | O adapter Fake permite executar testes sem banco de dados. No ambiente de produção, a persistência continua utilizando o adapter JPA e o PostgreSQL. |
+
+### 11.4 Restrições do problema (RPC)
 
 - Manter o Core em Spring Boot.
 - Reaproveitar as regras e o código existente, sem reescrita integral.
